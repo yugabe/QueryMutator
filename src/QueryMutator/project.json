@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0-beta",
+  "description": "QueryMutator Class Library",
+  "authors": [ "Gabe Szabo" ],
+  "tags": [ "Queryable Enumerable extensions ESHD query expressions expression tree" ],
+  "projectUrl": "",
+  "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0",
+  "frameworks": {
+    "net4.6.1": {
+    },
+    "dotnet5.4": {
+      "dependencies": {
+        "System.Linq.Queryable": "4.0.0",
+        "System.Reflection.TypeExtensions": "4.0.0"
+      }
+    }
+  },
+  "dependencies": {
+
+  }
+}
