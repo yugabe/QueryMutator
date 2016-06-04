@@ -12,11 +12,12 @@ type of your own, you probably saw and wrote lots of code like this:
 List<UserDto> users;
 using (var ctx = new MyContext())
 {
-    users = ctx.Users.Select(u => new UserDto {
-	    Id = u.Id,
-		FirstName = u.FirstName,
-		// and so on
-	}).ToList();
+    users = ctx.Users.Select(u => new UserDto
+    {
+        Id = u.Id,
+        FirstName = u.FirstName,
+        // and so on
+    }).ToList();
 }
 ```
 
@@ -42,12 +43,14 @@ expressions you want to use for mapping), you can *merge* the automatically gene
 mapping with _another expression_ to effectively extend your object or remap a property at runtime.
 
 ```c#
-List<UserDto> users;
+List<UserWithFriendsCountDto> users;
 using (var ctx = new MyContext())
 {
-    users = ctx.Users.MapToList<User, UserWithFriendsCountDto>(u => new UserWithFriendsCountDto> {
-	    FriendsCount = u.Friends.Count()
-	});
+    users = ctx.Users.MapToList<User, UserWithFriendsCountDto>(u => new UserWithFriendsCountDto 
+    {
+        FriendsCount = u.Friends.Count()
+		// Nothing else needs to be mapped!
+    });
 }
 ```
 
