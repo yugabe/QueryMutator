@@ -1,13 +1,15 @@
 {
   "version": "1.0.0-beta",
-  "description": "QueryMutator Class Library",
+  "title": "QueryMutator",
+  "description": "A lightweight query mapping library.",
+  "summary": "Queryable and Enumerable extensions for automapping objects and mapping multiple expressions into one.",
   "authors": [ "Gabe Szabo" ],
   "tags": [ "Queryable Enumerable extensions ESHD query expressions expression tree" ],
-  "projectUrl": "",
+  "projectUrl": "https://github.com/yugabe/QueryMutator",
   "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0",
   "frameworks": {
-    "net4.6.1": {
-    },
+    "net4.5.1": { },
+    "net4.6.1": { },
     "dotnet5.4": {
       "dependencies": {
         "System.Linq.Queryable": "4.0.0",

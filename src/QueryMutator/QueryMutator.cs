@@ -1,7 +1,7 @@
 ﻿using System.Linq.Expressions;
 using System.Reflection;
 using System.Collections.Generic;
-#if NETFX451 || NETFX46 || NET461
+#if NET461
 using System.Runtime.InteropServices;
 #endif
 
@@ -15,7 +15,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCopyright("Copyright ©  2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
-#if NETFX451 || NETFX46 || NET461
+#if NET461
 [assembly: ComVisible(false)]
 [assembly: Guid("473fa649-78e3-4fa0-ab8e-b13a5f5d951d")]
 #endif
