@@ -9,12 +9,9 @@ using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("QueryMutator")]
 [assembly: AssemblyDescription("Queryable and Enumerable extensions for automapping objects and mapping multiple expressions into one.")]
-[assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("QueryMutator")]
 [assembly: AssemblyCopyright("Copyright ©  2016")]
-[assembly: AssemblyTrademark("")]
-[assembly: AssemblyCulture("")]
+[assembly: AssemblyVersion("1.1.0")]
 #if NET461
 [assembly: ComVisible(false)]
 [assembly: Guid("473fa649-78e3-4fa0-ab8e-b13a5f5d951d")]
@@ -25,15 +22,17 @@ using System.Runtime.InteropServices;
 namespace System.Linq
 {
     /// <summary>
-    /// This class provides extensions and management features for dynamically mapping a type to another, and optionally merge object initializer expressions.
+    /// This class provides extensions and management features for dynamically mapping a type to another, and optionally merge object initializer
+    /// expressions.
     /// </summary>
     public static class QueryMutator
     {
 
-#region Configuration, static mappings
+        #region Configuration, static mappings
 
         /// <summary>
-        /// The configration type for <see cref="QueryMutator"/>. Use this class to store references to the registered mapping and other configuration properties.
+        /// The configration type for <see cref="QueryMutator"/>. Use this class to store references to the registered mapping and other 
+        /// configuration properties.
         /// </summary>
         public class Configuration
         {
@@ -43,27 +42,31 @@ namespace System.Linq
             public Guid Id { get; } = Guid.NewGuid();
 
             /// <summary>
-            /// The stored static mappings. The dictionary contains the source types (TSource) as the keys and the stored mappings as another dictionary, which 
-            /// holds the generated or registered <see cref="Expression"/> mapping (which is an <see cref="Expression{Func{TSource, TMap}}"/> type with the &lt;TSource&gt; 
-            /// and &lt;TMap&gt; generic type parameters) as the value for the &lt;TMap&gt; key.
+            /// The stored static mappings. The dictionary contains the source types (<typeparamref name="TMap"/>) as the keys and the stored 
+            /// mappings as another dictionary, which holds the generated or registered <see cref="Expression"/> mapping (which is an 
+            /// <see cref="Expression{Func{TSource, TMap}}"/> enclosing a <see cref="Func{TSource, TMap}"/> type with the 
+            /// <typeparamref name="TSource"/> and <typeparamref name="TMap"/> generic type parameters) as the value for the 
+            /// <typeparamref name="TMap"/> type key.
             /// </summary>
             internal Dictionary<Type, Dictionary<Type, Expression>> Mappings { get; } = new Dictionary<Type, Dictionary<Type, Expression>>();
 
             /// <summary>
-            /// Setting this property to true generates a missing mapping on demand (at runtime) instead of throwing an <see cref="InvalidOperationException"/> when the 
-            /// missing mapping is not found.
+            /// Setting this property to true generates a missing mapping on demand (at runtime) instead of throwing an 
+            /// <see cref="InvalidOperationException"/> when the missing mapping is not found.
             /// The default value is true.
             /// </summary>
             public bool GenerateMappingIfNotFound { get; set; } = true;
 
             /// <summary>
-            /// Setting this property to true indicates whether to throw an <see cref="InvalidOperationException"/> at runtime when a property on the type to be mapped cannot be mapped.
+            /// Setting this property to true indicates whether to throw an <see cref="InvalidOperationException"/> at runtime when a property on
+            /// the type to be mapped cannot be mapped.
             /// The default value is false.
             /// </summary>
             public bool ThrowOnPropertyNotMappable { get; set; } = false;
 
             /// <summary>
-            /// When a mapping tree is being recursively transversed, reaching this depth throws an exception. Setting this value to less than 1 disables checking for infinite recursion.
+            /// When a mapping tree is being recursively transversed, reaching this depth throws an exception. Setting this value to less than 1 
+            /// disables checking for infinite recursion.
             /// The default value is 50.
             /// </summary>
             public int MaximumRecursionDepth { get; set; } = 50;
@@ -79,10 +82,11 @@ namespace System.Linq
         /// </summary>
         private static Dictionary<Type, Dictionary<Type, Expression>> StaticMappings => CurrentConfiguration.Mappings;
 
-#region Mapping generation and retrieval
+        #region Mapping generation and retrieval
 
         /// <summary>
-        /// Helper method to generate a <see cref="MemberAssignment"/> <see cref="Expression"/> in the following form: <c>mapProperty = new [] { source.sourceProperty }.AsQueryable().Select(mapping).FirstOrDefault()</c>.
+        /// Helper method to generate a <see cref="MemberAssignment"/> <see cref="Expression"/> in the following form: 
+        /// <c>mapProperty = new [] { source.sourceProperty }.AsQueryable().Select(mapping).FirstOrDefault()</c>.
         /// This way a single property can be mapped using the queryable expression mapping selector.
         /// </summary>
         /// <param name="parameter">The input parameter being bound for the surrounding <see cref="LambdaExpression"/>.</param>
@@ -102,7 +106,8 @@ namespace System.Linq
         /// </summary>
         /// <typeparam name="TSource">The source type to map properties from to the target (map) type.</typeparam>
         /// <typeparam name="TMap">The map type's properties will be populated from the source type and additional mappings.</typeparam>
-        /// <param name="parameter">The parameter included in the <see cref="LambdaExpression"/> which is used to generate the mapping delegate expression.</param>
+        /// <param name="parameter">The parameter included in the <see cref="LambdaExpression"/> which is used to generate the mapping delegate 
+        /// expression.</param>
         /// <param name="memberBindings">The initial bindings to use when building the property mappings.</param>
         /// <param name="depth">This parameter indicates the possible recursion depth which might be used to detect a possible
         /// infinite recursion to prevent a <see cref="StackOverflowException"/> from occuring.</param>
@@ -178,7 +183,8 @@ namespace System.Linq
         }
 
         /// <summary>
-        /// Gets a mapping expression between the type <typeparamref name="TSource"/> and the type <typeparamref name="TMap"/>. Depending the current configuration, when a mapping is not found, one can be generated.
+        /// Gets a mapping expression between the type <typeparamref name="TSource"/> and the type <typeparamref name="TMap"/>. 
+        /// Depending on the current configuration, when a mapping is not found, one can be generated.
         /// </summary>
         /// <typeparam name="TSource">The source type to map the properties from.</typeparam>
         /// <typeparam name="TMap">The mapping type to map the properties to.</typeparam>
@@ -209,17 +215,18 @@ namespace System.Linq
             return mapping;
         }
 
-#endregion
+        #endregion
 
-#region Mapping registration
+        #region Mapping registration
 
         /// <summary>
-        /// Used internally to register a mapping between the given types using the <see cref="GenerateMapping{TSource, TMap}(ParameterExpression, List{MemberBinding}, int)"/> method.
+        /// Used internally to register a mapping between the given types using the 
+        /// <see cref="GenerateMapping{TSource, TMap}(ParameterExpression, List{MemberBinding}, int)"/> method.
         /// </summary>
         /// <param name="sourceType">The source type to map the properties from.</param>
         /// <param name="mappingType">The mapping type to map the properties to.</param>
-        /// <param name="depth">This parameter indicates the possible recursion depth which might be used to detect a possible
-        /// infinite recursion to prevent a <see cref="StackOverflowException"/> from occuring.</param>
+        /// <param name="depth">This parameter indicates the possible recursion depth which might be used to detect a possible infinite recursion
+        /// to prevent a <see cref="StackOverflowException"/> from occuring.</param>
         /// <returns>The <see cref="Expression"/> which is stored in the <see cref="StaticMappings"/> dictionary after generation.</returns>
         private static Expression RegisterMappingInternal(Type sourceType, Type mappingType, int depth = 0)
         {
@@ -244,7 +251,8 @@ namespace System.Linq
         public static void RegisterMapping<TSource, TMap>() where TMap : new() => RegisterMappingInternal(typeof(TSource), typeof(TMap));
 
         /// <summary>
-        /// Automatically register a mapping between the source and map types. Use this method when using reflection to explore the types in an assembly.
+        /// Automatically register a mapping between the source and map types. Use this method when using reflection to explore the types in an
+        /// assembly.
         /// </summary>
         /// <param name="sourceType">The source type to automatically map the properties from.</param>
         /// <param name="mappingType">The map type to automatically map the properties to.</param>
@@ -265,18 +273,20 @@ namespace System.Linq
             mappings[typeof(TMap)] = mapping;
         }
 
-#endregion
+        #endregion
 
-#endregion
+        #endregion
 
-#region Mapping extensions for IQueryable
+        #region Mapping extensions for IQueryable
 
         /// <summary>
         /// Automatically map the source type to the target type. If previously registered, uses the 
         /// registered mappings recursively or generates new mappings if the current configuration allows it.
         /// </summary>
-        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
-        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in
+        /// the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the 
+        /// source and map types are tried to map.</typeparam>
         /// <param name="source">The source to map to a target using the automatically generated and manually registered expressions.</param>
         /// <returns>The mapped <see cref="IQueryable{TMap}"/> instance.</returns>
         public static IQueryable<TMap> MapTo<TSource, TMap>(this IQueryable<TSource> source) where TMap : new()
@@ -286,49 +296,60 @@ namespace System.Linq
         /// Automatically map the source type to the target type using a merging expression to merge with. If previously registered, uses the 
         /// registered mappings recursively or generates new mappings if the current configuration allows it.
         /// </summary>
-        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
-        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in
+        /// the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the 
+        /// source and map types are tried to map.</typeparam>
         /// <param name="source">The source to map to a target using the automatically generated and manually registered expressions.</param>
-        /// <param name="mergeWith">The <see cref="Expression"/> to merge the automatic mapping with. The <see cref="Expression"/> has to be a simple object initializer, otherwise a runtime exception will be thrown.</param>
+        /// <param name="mergeWith">The <see cref="Expression"/> to merge the automatic mapping with. The <see cref="Expression"/> has to be a 
+        /// simple object initializer, otherwise a runtime exception will be thrown.</param>
         /// <returns>The mapped <see cref="IQueryable{TMap}"/> instance.</returns>
         public static IQueryable<TMap> MapTo<TSource, TMap>(this IQueryable<TSource> source, Expression<Func<TSource, TMap>> mergeWith) where TMap : new()
             => source.Select(GenerateMapping<TSource, TMap>(mergeWith.Parameters.Single(), (mergeWith.Body as MemberInitExpression).Bindings.ToList()));
 
         /// <summary>
-        /// Automatically map the source type to the target type and call <see cref="Enumerable.ToList"/> to pull it to application memory. If previously registered, uses the 
-        /// registered <see cref="StaticMappings"/> recursively or generates new mappings if <see cref="CurrentConfiguration"/> allows it.
+        /// Automatically map the source type to the target type and call <see cref="Enumerable.ToList"/> to pull it to application memory. If 
+        /// previously registered, uses the registered <see cref="StaticMappings"/> recursively or generates new mappings if 
+        /// <see cref="CurrentConfiguration"/> allows it.
         /// </summary>
-        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
-        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in
+        /// the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the 
+        /// source and map types are tried to map.</typeparam>
         /// <param name="source">The source to map to a target using the automatically generated and manually registered expressions.</param>
         /// <returns>The mapped instances queried to a <see cref="List{TMap}"/> collection.</returns>
         public static List<TMap> MapToList<TSource, TMap>(this IQueryable<TSource> source, Expression<Func<TSource, TMap>> mergeWith) where TMap : new()
             => source.MapTo(mergeWith).ToList();
 
         /// <summary>
-        /// Automatically map the source type to the target type using a merging expression to merge with and call <see cref="Enumerable.ToList"/> to pull it to application memory. If previously registered, uses the 
-        /// registered mappings recursively or generates new mappings if the current configuration allows it.
+        /// Automatically map the source type to the target type using a merging expression to merge with and call <see cref="Enumerable.ToList"/>
+        /// to pull it to application memory. If previously registered, uses the registered mappings recursively or generates new mappings if the
+        /// current configuration allows it.
         /// </summary>
-        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
-        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in
+        /// the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the 
+        /// source and map types are tried to map.</typeparam>
         /// <param name="source">The source to map to a target using the automatically generated and manually registered expressions.</param>
-        /// <param name="mergeWith">The expression to merge the automatic mapping with. The <see cref="Expression"/> has to be a simple object initializer, otherwise a runtime exception will be thrown.</param>
+        /// <param name="mergeWith">The expression to merge the automatic mapping with. The <see cref="Expression"/> has to be a simple object 
+        /// initializer, otherwise a runtime exception will be thrown.</param>
         /// <returns>The mapped instances queried to a <see cref="List{TMap}"/> collection.</returns>
         public static List<TMap> MapToList<TSource, TMap>(this IQueryable<TSource> source) where TMap : new()
             => source.MapTo<TSource, TMap>().ToList();
 
+        #endregion
 
-#endregion
-
-#region Mapping extensions for IEnumerable
+        #region Mapping extensions for IEnumerable
 
         /// <summary>
         /// Automatically map the source type to the target type. If previously registered, uses the 
         /// registered mappings recursively or generates new mappings if the current configuration allows it.
         /// </summary>
         /// <remarks>Compiles the generated or stored Expression to a delegate with every call.</remarks>
-        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
-        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in
+        /// the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the 
+        /// source and map types are tried to map.</typeparam>
         /// <param name="source">The source to map to a target using the automatically generated and manually registered expressions.</param>
         /// <returns>The mapped <see cref="IQueryable{TMap}"/> instance.</returns>
         public static IEnumerable<TMap> MapTo<TSource, TMap>(this IEnumerable<TSource> source) where TMap : new()
@@ -339,40 +360,83 @@ namespace System.Linq
         /// registered mappings recursively or generates new mappings if the current configuration allows it.
         /// </summary>
         /// <remarks>Compiles the generated or stored Expression to a delegate with every call.</remarks>
-        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
-        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in
+        /// the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the 
+        /// source and map types are tried to map.</typeparam>
         /// <param name="source">The source to map to a target using the automatically generated and manually registered expressions.</param>
-        /// <param name="mergeWith">The <see cref="Expression"/> to merge the automatic mapping with. The <see cref="Expression"/> has to be a simple object initializer, otherwise a runtime exception will be thrown.</param>
+        /// <param name="mergeWith">The <see cref="Expression"/> to merge the automatic mapping with. The <see cref="Expression"/> has to be a 
+        /// simple object initializer, otherwise a runtime exception will be thrown.</param>
         /// <returns>The mapped <see cref="IQueryable{TMap}"/> instance.</returns>
         public static IEnumerable<TMap> MapTo<TSource, TMap>(this IEnumerable<TSource> source, Expression<Func<TSource, TMap>> mergeWith) where TMap : new()
             => source.Select(GenerateMapping<TSource, TMap>(mergeWith.Parameters.Single(), (mergeWith.Body as MemberInitExpression).Bindings.ToList()).Compile());
 
         /// <summary>
-        /// Automatically map the source type to the target type and call <see cref="Enumerable.ToList"/> to pull it to application memory. If previously registered, uses the 
-        /// registered <see cref="StaticMappings"/> recursively or generates new mappings if <see cref="CurrentConfiguration"/> allows it.
+        /// Automatically map the source type to the target type using a merging expression to merge with and call <see cref="Enumerable.ToList"/>
+        /// to pull it to application memory. If previously registered, uses the registered mappings recursively or generates new mappings if the 
+        /// current configuration allows it.
         /// </summary>
         /// <remarks>Compiles the generated or stored Expression to a delegate with every call.</remarks>
-        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
-        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in
+        /// the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the 
+        /// source and map types are tried to map.</typeparam>
         /// <param name="source">The source to map to a target using the automatically generated and manually registered expressions.</param>
+        /// <param name="mergeWith">The expression to merge the automatic mapping with. The <see cref="Expression"/> has to be a simple object 
+        /// initializer, otherwise a runtime exception will be thrown.</param>
         /// <returns>The mapped instances queried to a <see cref="List{TMap}"/> collection.</returns>
         public static List<TMap> MapToList<TSource, TMap>(this IEnumerable<TSource> source, Expression<Func<TSource, TMap>> mergeWith) where TMap : new()
             => source.MapTo(mergeWith).ToList();
 
         /// <summary>
-        /// Automatically map the source type to the target type using a merging expression to merge with and call <see cref="Enumerable.ToList"/> to pull it to application memory. If previously registered, uses the 
-        /// registered mappings recursively or generates new mappings if the current configuration allows it.
+        /// Automatically map the source type to the target type and call <see cref="Enumerable.ToList"/> to pull it to application memory. If 
+        /// previously registered, uses the registered <see cref="StaticMappings"/> recursively or generates new mappings if
+        /// <see cref="CurrentConfiguration"/> allows it.
         /// </summary>
         /// <remarks>Compiles the generated or stored Expression to a delegate with every call.</remarks>
-        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
-        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in
+        /// the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the 
+        /// source and map types are tried to map.</typeparam>
         /// <param name="source">The source to map to a target using the automatically generated and manually registered expressions.</param>
-        /// <param name="mergeWith">The expression to merge the automatic mapping with. The <see cref="Expression"/> has to be a simple object initializer, otherwise a runtime exception will be thrown.</param>
         /// <returns>The mapped instances queried to a <see cref="List{TMap}"/> collection.</returns>
         public static List<TMap> MapToList<TSource, TMap>(this IEnumerable<TSource> source) where TMap : new()
             => source.MapTo<TSource, TMap>().ToList();
 
-#endregion
+        #endregion
+
+        #region Mapping extensions for everything else
+
+        /// <summary>
+        /// Automatically map the source type to the target type. If previously registered, uses the 
+        /// registered mappings recursively or generates new mappings if the current configuration allows it.
+        /// </summary>
+        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in
+        /// the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the 
+        /// source and map types are tried to map.</typeparam>
+        /// <param name="source">The source to map to a target using the automatically generated and manually registered expressions.</param>
+        /// <returns>The mapped <see cref="{TMap}"/> instance.</returns>
+        public static TMap MapTo<TSource, TMap>(this TSource source) where TMap : new()
+            => new[] { source }.MapTo<TSource, TMap>().FirstOrDefault();
+
+        /// <summary>
+        /// Automatically map the source type to the target type using a merging expression to merge with. If previously registered, uses the 
+        /// registered mappings recursively or generates new mappings if the current configuration allows it.
+        /// </summary>
+        /// <remarks>Compiles the generated or stored Expression to a delegate with every call.</remarks>
+        /// <typeparam name="TSource">The type to map from. When depending on automatic generation, the properties with the same property names in
+        /// the source and map types are tried to map.</typeparam>
+        /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the 
+        /// source and map types are tried to map.</typeparam>
+        /// <param name="source">The source to map to a target using the automatically generated and manually registered expressions.</param>
+        /// <param name="mergeWith">The <see cref="Expression"/> to merge the automatic mapping with. The <see cref="Expression"/> has to be a 
+        /// simple object initializer, otherwise a runtime exception will be thrown.</param>
+        /// <returns>The mapped <see cref="IQueryable{TMap}"/> instance.</returns>
+        public static TMap MapTo<TSource, TMap>(this TSource source, Expression<Func<TSource, TMap>> mergeWith) where TMap : new()
+            => new[] { source }.MapTo(mergeWith).FirstOrDefault();
+
+        #endregion
 
     }
 }

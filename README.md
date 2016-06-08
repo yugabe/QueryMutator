@@ -3,10 +3,22 @@ QueryMutator
 
 ### Queryable and Enumerable extensions for automapping objects and mapping multiple expressions into one.
 
+What's new in 1.1.0-beta?
+-------------------------
+* Now you can map a single object to another!
+```c#
+var dog = new Dog { Name = "Bloki" };
+var cloneDog = dog.MapTo<Dog>();
+var cat = dog.MapTo<Cat>();
+```
+Keep in mind that this uses a safe extension, so calling MapTo on 
+an object won't cause a NullReference exception if the object is null.
+
 What's it for?
 --------------
 
-It's an object mapper for .NET (4.5.1, 4.6.1) and .NET Core (Framework 5.4). If you ever tried to map objects from an IQueryable to a custom 
+It's an object mapper for .NET (4.5.1, 4.6.1) and .NET Core (Framework 5.4). If you ever tried to map objects 
+from an IQueryable to a custom 
 type of your own, you probably saw and wrote lots of code like this:
 ```c#
 List<UserDto> users;
@@ -78,6 +90,6 @@ CurrentConfiguration static property, but you can switch it out anytime at runti
 I'm sold. Where can I get it?
 -----------------------------
 
-You can get the *source* here at [GitHub](https://github.com/yugabe/QueryMutator), feel free to send a pull request if you'd like to contribute. The project
-is open source and free to use.  
+You can get the *source* here at [GitHub](https://github.com/yugabe/QueryMutator), feel free to send a pull 
+request if you'd like to contribute. The project is open source and free to use.  
 You can download the NuGet package from [NuGet](https://www.nuget.org/packages/QueryMutator/).
