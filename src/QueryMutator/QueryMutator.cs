@@ -436,6 +436,30 @@ namespace System.Linq
         public static TMap MapTo<TSource, TMap>(this TSource source, Expression<Func<TSource, TMap>> mergeWith) where TMap : new()
             => new[] { source }.MapTo(mergeWith).FirstOrDefault();
 
+        /// <summary>
+        /// Create a shallow copy of an object.
+        /// </summary>
+        /// <remarks>Remember that making a shallow copy of an object copies the properties by assignment, thus if a property is a value type
+        /// it will be copied, and if it is a reference type, it's reference will be copied (not the object itself).</remarks>
+        /// <typeparam name="T">The type to map from and to.</typeparam>
+        /// <param name="source">The source object to create a copy of.</param>
+        /// <returns>The mapped <typeparamref name="T"/> instance.</returns>
+        public static T Clone<T>(this T source) where T : new()
+            => new[] { source }.MapTo<T, T>().FirstOrDefault();
+
+        /// <summary>
+        /// Create a shallow copy of an object.
+        /// </summary>
+        /// <remarks>Remember that making a shallow copy of an object copies the properties by assignment, thus if a property is a value type
+        /// it will be copied, and if it is a reference type, it's reference will be copied (not the object itself).</remarks>
+        /// <typeparam name="T">The type to map from and to.</typeparam>
+        /// <param name="source">The source object to create a copy of.</param>
+        /// <param name="mergeWith">The <see cref="Expression"/> to merge the automatic mapping with. The <see cref="Expression"/> has to be a 
+        /// simple object initializer, otherwise a runtime exception will be thrown.</param>
+        /// <returns>The mapped <typeparamref name="T"/> instance.</returns>
+        public static T Clone<T>(this T source, Expression<Func<T, T>> mergeWith) where T : new()
+            => new[] { source }.MapTo(mergeWith).FirstOrDefault();
+
         #endregion
 
     }

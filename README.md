@@ -3,13 +3,22 @@ QueryMutator
 
 ### Queryable and Enumerable extensions for automapping objects and mapping multiple expressions into one.
 
+What's new in 1.2.0-beta?
+-------------------------
+* Easily make a shallow copy of an object.
+```c#
+var dog = new Dog { Name = "Bloki" };
+var cloneDog = dog.Clone();
+```
+This is only an easy shorthand for the appropriate MapTo method.
+
 What's new in 1.1.0-beta?
 -------------------------
 * Now you can map a single object to another!
 ```c#
 var dog = new Dog { Name = "Bloki" };
-var cloneDog = dog.MapTo<Dog>();
-var cat = dog.MapTo<Cat>();
+var cloneDog = dog.MapTo<Dog, Dog>();
+var cat = dog.MapTo<Dog, Cat>();
 ```
 Keep in mind that this uses a safe extension, so calling MapTo on 
 an object won't cause a NullReference exception if the object is null.
