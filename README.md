@@ -20,8 +20,8 @@ var dog = new Dog { Name = "Bloki" };
 var cloneDog = dog.MapTo<Dog, Dog>();
 var cat = dog.MapTo<Dog, Cat>();
 ```
-Keep in mind that this uses a safe extension, so calling MapTo on 
-an object won't cause a NullReference exception if the object is null.
+Keep in mind that this uses a safe extension, so calling MapTo on an object won't cause a 
+NullReferenceException if the object is null.
 
 What's it for?
 --------------
