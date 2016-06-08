@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0-beta",
+  "version": "1.2.0-beta",
   "title": "QueryMutator",
   "description": "A lightweight query mapping library.",
   "summary": "Queryable and Enumerable extensions for automapping objects and mapping multiple expressions into one.",

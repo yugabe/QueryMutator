@@ -11,7 +11,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyDescription("Queryable and Enumerable extensions for automapping objects and mapping multiple expressions into one.")]
 [assembly: AssemblyProduct("QueryMutator")]
 [assembly: AssemblyCopyright("Copyright ©  2016")]
-[assembly: AssemblyVersion("1.1.0")]
+[assembly: AssemblyVersion("1.2.0")]
 #if NET461
 [assembly: ComVisible(false)]
 [assembly: Guid("473fa649-78e3-4fa0-ab8e-b13a5f5d951d")]
