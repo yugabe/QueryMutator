@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "QueryMutator.Core": {
+      "commandName": "Project"
+    }
+  }
+}

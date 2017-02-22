@@ -1,23 +1,6 @@
 ﻿using System.Linq.Expressions;
 using System.Reflection;
 using System.Collections.Generic;
-#if NET461
-using System.Runtime.InteropServices;
-#endif
-
-#region Assembly information
-
-[assembly: AssemblyTitle("QueryMutator")]
-[assembly: AssemblyDescription("Queryable and Enumerable extensions for automapping objects and mapping multiple expressions into one.")]
-[assembly: AssemblyProduct("QueryMutator")]
-[assembly: AssemblyCopyright("Copyright ©  2016")]
-[assembly: AssemblyVersion("1.2.0")]
-#if NET461
-[assembly: ComVisible(false)]
-[assembly: Guid("473fa649-78e3-4fa0-ab8e-b13a5f5d951d")]
-#endif
-
-#endregion
 
 namespace System.Linq
 {
@@ -27,6 +10,7 @@ namespace System.Linq
     /// </summary>
     public static class QueryMutator
     {
+        private static readonly object syncRoot = new object();
 
         #region Configuration, static mappings
 
@@ -109,10 +93,11 @@ namespace System.Linq
         /// <param name="parameter">The parameter included in the <see cref="LambdaExpression"/> which is used to generate the mapping delegate 
         /// expression.</param>
         /// <param name="memberBindings">The initial bindings to use when building the property mappings.</param>
+        /// <param name="checkCollectionsForNull">Indicates whether to generate conditional null mapping for collections in the given type.</param>
         /// <param name="depth">This parameter indicates the possible recursion depth which might be used to detect a possible
         /// infinite recursion to prevent a <see cref="StackOverflowException"/> from occuring.</param>
         /// <returns>The generated mapping between the <typeparamref name="TSource"/> and <typeparamref name="TMap"/> types.</returns>
-        private static Expression<Func<TSource, TMap>> GenerateMapping<TSource, TMap>(ParameterExpression parameter, List<MemberBinding> memberBindings, int depth = 0) where TMap : new()
+        private static Expression<Func<TSource, TMap>> GenerateMapping<TSource, TMap>(ParameterExpression parameter, List<MemberBinding> memberBindings, bool checkCollectionsForNull, int depth = 0) where TMap : new()
         {
             var sourceType = typeof(TSource);
             var mapType = typeof(TMap);
@@ -125,43 +110,60 @@ namespace System.Linq
             var boundProperties = new HashSet<string>(memberBindings.Select(m => m.Member.Name));
 
             // Iterate over the source's properties.
-            foreach (var sourceProperty in sourceType.GetProperties().Where(p => !boundProperties.Contains(p.Name)))
+            foreach (var sourceProperty in sourceType.GetRuntimeProperties().Where(p => !boundProperties.Contains(p.Name)))
             {
-                var mapProperty = mapType.GetProperty(sourceProperty.Name);
+                var mapProperty = mapType.GetRuntimeProperty(sourceProperty.Name);
                 if (mapProperty == null) // There is no matching property in the mapping object.
                     continue;
 
-                if (mapProperty.PropertyType.IsAssignableFrom(sourceProperty.PropertyType))
+                if (mapProperty.PropertyType.GetTypeInfo().IsAssignableFrom(sourceProperty.PropertyType.GetTypeInfo()))
                 {
                     // The source property can simply be assigned to the mapped property.
                     memberBindings.Add(Expression.Bind(mapProperty, Expression.PropertyOrField(parameter, sourceProperty.Name)));
                 }
-                else if (StaticMappings.Any(m => m.Key.IsAssignableFrom(sourceProperty.PropertyType) && (selectedMapping = m.Value.FirstOrDefault(em => em.Key.IsAssignableFrom(mapProperty.PropertyType)).Value) != null))
+                else if (StaticMappings.Any(m => m.Key.GetTypeInfo().IsAssignableFrom(sourceProperty.PropertyType.GetTypeInfo()) && (selectedMapping = m.Value.FirstOrDefault(em => em.Key.GetTypeInfo().IsAssignableFrom(mapProperty.PropertyType.GetTypeInfo())).Value) != null))
                 {
                     // There is already a mapping registered between the source and mapped property types, so reuse that.
                     memberBindings.Add(GenerateQueryableBinding(parameter, sourceProperty, mapProperty, selectedMapping));
                 }
                 else if (
-                    sourceProperty.PropertyType.GetInterfaces().Concat(new[] { sourceProperty.PropertyType }).Any(i => i.GetTypeInfo().IsGenericType && (i.GetGenericTypeDefinition() == typeof(ICollection<>) || i.GetGenericTypeDefinition() == typeof(IQueryable<>)) && (collectionSourceType = i.GetGenericArguments().FirstOrDefault()) != null) &&
-                    mapProperty.PropertyType.GetInterfaces().Concat(new[] { mapProperty.PropertyType }).Any(i => i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>) && (collectionMapType = i.GetGenericArguments().FirstOrDefault()) != null) &&
-                    mapProperty.PropertyType.IsAssignableFrom(typeof(List<>).MakeGenericType(collectionMapType))
+                    sourceProperty.PropertyType.GetTypeInfo().ImplementedInterfaces.Concat(new[] { sourceProperty.PropertyType }).Any(i => i.GetTypeInfo().IsGenericType && (i.GetGenericTypeDefinition() == typeof(ICollection<>) || i.GetGenericTypeDefinition() == typeof(IQueryable<>)) && (collectionSourceType = i.GenericTypeArguments.FirstOrDefault()) != null) &&
+                    mapProperty.PropertyType.GetTypeInfo().ImplementedInterfaces.Concat(new[] { mapProperty.PropertyType }).Any(i => i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>) && (collectionMapType = i.GenericTypeArguments.FirstOrDefault()) != null) &&
+                    mapProperty.PropertyType.GetTypeInfo().IsAssignableFrom(typeof(List<>).MakeGenericType(collectionMapType).GetTypeInfo())
                     )
                 {
                     // If it is a collection mapping that is not assignable because of variance, try explicit mapping between the two using already registered static mappings or try to generate them. Watch out for infinite recursion.
-                    if (StaticMappings.Any(m => m.Key.IsAssignableFrom(collectionSourceType) && (selectedMapping = m.Value.FirstOrDefault(em => em.Key.IsAssignableFrom(collectionMapType)).Value) != null) || (CurrentConfiguration.GenerateMappingIfNotFound && (selectedMapping = RegisterMappingInternal(collectionSourceType, collectionMapType, depth + 1)) != null))
+                    if (StaticMappings.Any(m => m.Key.GetTypeInfo().IsAssignableFrom(collectionSourceType.GetTypeInfo()) && (selectedMapping = m.Value.FirstOrDefault(em => em.Key.GetTypeInfo().IsAssignableFrom(collectionMapType.GetTypeInfo())).Value) != null) || (CurrentConfiguration.GenerateMappingIfNotFound && (selectedMapping = RegisterMappingInternal(collectionSourceType, collectionMapType, checkCollectionsForNull, depth + 1)) != null))
                     {
-                        // Generates the mapping between the two properties in the following form: mapProperty = source.sourceProperty.AsQueryable().Select(mapping).ToList().
-                        memberBindings.Add(Expression.Bind(mapProperty,
-                            Expression.Call(typeof(Enumerable), nameof(Enumerable.ToList), new[] { collectionMapType },
-                                Expression.Call(typeof(Queryable), nameof(Queryable.Select), new[] { collectionSourceType, collectionMapType },
-                                    Expression.Call(typeof(Queryable), nameof(Queryable.AsQueryable), new[] { collectionSourceType }, Expression.PropertyOrField(parameter, sourceProperty.Name)),
-                                        Expression.Constant(selectedMapping)))));
+                        var falseBranch = Expression.Call(typeof(Enumerable), nameof(Enumerable.ToList), new[] { collectionMapType },
+                                        Expression.Call(typeof(Queryable), nameof(Queryable.Select), new[] { collectionSourceType, collectionMapType },
+                                            Expression.Call(typeof(Queryable), nameof(Queryable.AsQueryable), new[] { collectionSourceType }, Expression.PropertyOrField(parameter, sourceProperty.Name)),
+                                                Expression.Constant(selectedMapping)));
+
+                        if (checkCollectionsForNull)
+                        {
+                            // Generates the mapping between the two properties in the following form: mapProperty = source.sourceProperty == null ? null : source.sourceProperty.AsQueryable().Select(mapping).ToList().
+                            memberBindings.Add(
+                                Expression.Bind(mapProperty,
+                                    Expression.Condition(
+                                        test: Expression.Equal(Expression.PropertyOrField(parameter, sourceProperty.Name), Expression.Constant(null, sourceProperty.PropertyType)),
+                                        ifTrue: Expression.Constant(null, falseBranch.Method.ReturnType),
+                                        ifFalse: falseBranch
+                                        )
+                                    )
+                                );
+                        }
+                        else
+                        {
+                            // Generates the mapping between the two properties in the following form: mapProperty = source.sourceProperty.AsQueryable().Select(mapping).ToList().
+                            memberBindings.Add(Expression.Bind(mapProperty, falseBranch));
+                        }
                     }
                 }
                 else if (CurrentConfiguration.GenerateMappingIfNotFound)
                 {
                     // No mapping is found, but the name matches. Try generating the mapping manually between the two.
-                    selectedMapping = RegisterMappingInternal(sourceProperty.PropertyType, mapProperty.PropertyType, depth + 1);
+                    selectedMapping = RegisterMappingInternal(sourceProperty.PropertyType, mapProperty.PropertyType, checkCollectionsForNull, depth + 1);
                     if (selectedMapping != null)
                         memberBindings.Add(GenerateQueryableBinding(parameter, sourceProperty, mapProperty, selectedMapping));
                 }
@@ -188,28 +190,34 @@ namespace System.Linq
         /// </summary>
         /// <typeparam name="TSource">The source type to map the properties from.</typeparam>
         /// <typeparam name="TMap">The mapping type to map the properties to.</typeparam>
+        /// <param name="checkCollectionsForNull">Indicates whether to generate conditional null mapping for collections in the given type.</param>
         /// <returns>The <see cref="Expression"/> representing the delegate for mapping between the source and map types.</returns>
-        public static Expression<Func<TSource, TMap>> GetMapping<TSource, TMap>() where TMap : new()
+        public static Expression<Func<TSource, TMap>> GetMapping<TSource, TMap>(bool checkCollectionsForNull) where TMap : new()
         {
             var sourceType = typeof(TSource);
             var mapType = typeof(TMap);
-            Dictionary<Type, Expression> mappings;
-            Expression expression;
-            Expression<Func<TSource, TMap>> mapping;
-            if (!StaticMappings.TryGetValue(sourceType, out mappings))
-                StaticMappings[sourceType] = mappings = new Dictionary<Type, Expression>();
+            if (!StaticMappings.TryGetValue(sourceType, out Dictionary<Type, Expression> mappings))
+            {
+                lock (syncRoot)
+                {
+                    if (!StaticMappings.TryGetValue(sourceType, out mappings))
+                        StaticMappings[sourceType] = mappings = new Dictionary<Type, Expression>();
+                }
+            }
 
-            if (!mappings.TryGetValue(mapType, out expression)
-                && (!StaticMappings.Any(m => m.Key.IsAssignableFrom(sourceType) && (expression = m.Value.FirstOrDefault(em => em.Key.IsAssignableFrom(mapType)).Value) != null))
+            if (!mappings.TryGetValue(mapType, out Expression expression)
+                && (!StaticMappings.Any(m => m.Key.GetTypeInfo().IsAssignableFrom(sourceType.GetTypeInfo()) && (expression = m.Value.FirstOrDefault(em => em.Key.GetTypeInfo().IsAssignableFrom(mapType.GetTypeInfo())).Value) != null))
                 && !CurrentConfiguration.GenerateMappingIfNotFound)
                 throw new InvalidOperationException($"No mapping was specified between the source type {sourceType} for type {mapType}. Use the {nameof(RegisterMapping)} method to register or replace a static mapping expression.");
 
-            if ((mapping = (expression as Expression<Func<TSource, TMap>>)) == null)
+            var mapping = expression as Expression<Func<TSource, TMap>>;
+
+            if (mapping == null)
             {
                 if (!CurrentConfiguration.GenerateMappingIfNotFound)
                     throw new InvalidOperationException($"The provided mapping between the source type {sourceType} for type {mapType} was not the correct type registered. Use the {nameof(RegisterMapping)} method to register or replace a mapping expression.");
 
-                return GenerateMapping<TSource, TMap>(Expression.Parameter(sourceType, sourceType.Name[0].ToString().ToLower()), new List<MemberBinding>(), 0);
+                return GenerateMapping<TSource, TMap>(Expression.Parameter(sourceType, sourceType.Name[0].ToString().ToLower()), new List<MemberBinding>(), checkCollectionsForNull, 0);
             }
 
             return mapping;
@@ -220,25 +228,108 @@ namespace System.Linq
         #region Mapping registration
 
         /// <summary>
+        /// Used to generate predefined mappings for cached retrieval later. Pairs all found types in the matching assemblies where the source type is
+        /// derived from or implements typeof(<paramref name="source"/>) and the target type is 
+        /// typeof(T<paramref name="genericMapInterface"/>&lt;T<paramref name="source"/>&gt;).
+        /// </summary>
+        /// <param name="source">The interface or base class type for the source objects to be mapped.</param>
+        /// <param name="genericMapInterface">The generic interface to be matched against.</param>
+        /// <param name="checkCollectionsForNullOnSource">Indicates whether to generate conditional null mapping for collections in the given source type.</param>
+        /// <param name="checkCollectionsForNullOnTarget">Indicates whether to generate conditional null mapping for collections in the given target type.</param>
+        /// <param name="additionalAssemblies">Additional assemblies to scan, besides the ones of the <paramref name="source"/> and 
+        /// <paramref name="genericMapInterface"/> parameters' assemblies</param>
+        public static void RegisterMappings(Type source, Type genericMapInterface, bool? checkCollectionsForNullOnSource = false, bool? checkCollectionsForNullOnTarget = true, params Assembly[] additionalAssemblies)
+        {
+            var sourceTypeInfo = source.GetTypeInfo();
+            var genericMapInterfaceTypeInfo = genericMapInterface.GetTypeInfo();
+
+            if (!((sourceTypeInfo.IsGenericTypeDefinition && sourceTypeInfo.GenericTypeArguments.Length == 1) ^ (genericMapInterfaceTypeInfo.IsGenericTypeDefinition && genericMapInterfaceTypeInfo.GenericTypeParameters.Length == 1)))
+                throw new ArgumentException($"Either the {nameof(sourceTypeInfo)} or the {nameof(genericMapInterfaceTypeInfo)} type should have exactly one generic type parameter, and the other none.");
+
+            if (checkCollectionsForNullOnSource == null && checkCollectionsForNullOnTarget == null)
+                throw new ArgumentException($"Either the {nameof(checkCollectionsForNullOnSource)} or the {nameof(checkCollectionsForNullOnTarget)} values must not be null to generate any mappings.");
+
+            var types = additionalAssemblies.Concat(new[] { sourceTypeInfo.Assembly, genericMapInterfaceTypeInfo.Assembly }).Distinct().SelectMany(a => a.DefinedTypes).ToList();
+
+            foreach (var type in types.Where(t => t.ImplementedInterfaces.Contains(source)))
+                foreach (var stub in types.Where(t => t.ImplementedInterfaces.Any(i => i.GetTypeInfo().IsGenericType && i.GetTypeInfo().GenericTypeArguments.Any(g => g.GetTypeInfo() == type) && i.GetGenericTypeDefinition() == genericMapInterface)))
+                    RegisterMappingBetweenSourceAndTarget(type.AsType(), stub.AsType(), checkCollectionsForNullOnSource, checkCollectionsForNullOnTarget);
+        }
+
+        /// <summary>
+        /// Used to generate predefined mappings for cached retrieval later. Pairs all found types in the matching assemblies where the source type is
+        /// derived from or implements any of the source type's elements and the target type is any of the target type elements.
+        /// </summary>
+        /// <param name="sources">The interface or base class types for the source objects to be mapped.</param>
+        /// <param name="genericMapInterfaces">The generic interfaces to be matched against.</param>
+        /// <param name="checkCollectionsForNullOnSource">Indicates whether to generate conditional null mapping for collections in the given source type.</param>
+        /// <param name="checkCollectionsForNullOnTarget">Indicates whether to generate conditional null mapping for collections in the given target type.</param>
+        /// <param name="additionalAssemblies">Additional assemblies to scan, besides the ones of the <paramref name="source"/> and 
+        /// <paramref name="genericMapInterface"/> parameters' assemblies</param>
+        public static void RegisterMappings(IEnumerable<Type> sources, IEnumerable<Type> genericMapInterfaces, bool? checkCollectionsForNullOnSource = false, bool? checkCollectionsForNullOnTarget = true, params Assembly[] additionalAssemblies)
+        {
+            var source = sources.ToArray();
+            var generics = genericMapInterfaces.ToArray();
+            if (!(sources.All(s => s.GetTypeInfo().IsGenericTypeDefinition && s.GenericTypeArguments.Length == 1) ^ genericMapInterfaces.All(i => i.GetTypeInfo().IsGenericTypeDefinition && i.GetTypeInfo().GenericTypeParameters.Length == 1)))
+                throw new ArgumentException($"Either the {nameof(sources)} or the {nameof(genericMapInterfaces)} types should have exactly one generic type parameter, and the other none.");
+
+            if (checkCollectionsForNullOnSource == null && checkCollectionsForNullOnTarget == null)
+                throw new ArgumentException($"Either the {nameof(checkCollectionsForNullOnSource)} or the {nameof(checkCollectionsForNullOnTarget)} values must not be null to generate any mappings.");
+
+            var types = additionalAssemblies.Concat(sources.Select(s => s.GetTypeInfo().Assembly)).Concat(genericMapInterfaces.Select(i => i.GetTypeInfo().Assembly)).Distinct().SelectMany(a => a.DefinedTypes).ToList();
+
+            foreach (var type in types.Where(t => t.ImplementedInterfaces.Any(i => sources.Contains(i))))
+                foreach (var stub in types.Where(t => t.ImplementedInterfaces.Any(i => i.GetTypeInfo().IsGenericType && i.GetTypeInfo().GenericTypeArguments.Any(g => g.GetTypeInfo() == type) && genericMapInterfaces.Any(g => i.GetGenericTypeDefinition() == g))))
+                    RegisterMappingBetweenSourceAndTarget(type.AsType(), stub.AsType(), checkCollectionsForNullOnSource, checkCollectionsForNullOnTarget);
+        }
+
+        /// <summary>
+        /// Registers the mappings between the given types based on the given collection check parameters. Either Nullable&lt;boolean&gt; value having null will
+        /// skip generating the corresponding mappings.
+        /// </summary>
+        /// <param name="sourceType">The interface or base class type for the source objects to be mapped.</param>
+        /// <param name="mappingType">The generic interface to be matched against.</param>
+        /// <param name="checkCollectionsForNullOnSource">Indicates whether to generate conditional null mapping for collections in the given source type.</param>
+        /// <param name="checkCollectionsForNullOnTarget">Indicates whether to generate conditional null mapping for collections in the given target type.</param>
+        private static void RegisterMappingBetweenSourceAndTarget(Type sourceType, Type mappingType, bool? checkCollectionsForNullOnSource, bool? checkCollectionsForNullOnTarget)
+        {
+            if (checkCollectionsForNullOnSource != null)
+                RegisterMappingInternal(sourceType, mappingType, checkCollectionsForNullOnSource.Value);
+            if (checkCollectionsForNullOnTarget != null)
+                RegisterMappingInternal(mappingType, sourceType, checkCollectionsForNullOnTarget.Value);
+        }
+
+        /// <summary>
         /// Used internally to register a mapping between the given types using the 
         /// <see cref="GenerateMapping{TSource, TMap}(ParameterExpression, List{MemberBinding}, int)"/> method.
         /// </summary>
         /// <param name="sourceType">The source type to map the properties from.</param>
         /// <param name="mappingType">The mapping type to map the properties to.</param>
+        /// <param name="checkCollectionsForNull">Indicates whether to generate conditional null mapping for collections in the given type.</param>
         /// <param name="depth">This parameter indicates the possible recursion depth which might be used to detect a possible infinite recursion
         /// to prevent a <see cref="StackOverflowException"/> from occuring.</param>
         /// <returns>The <see cref="Expression"/> which is stored in the <see cref="StaticMappings"/> dictionary after generation.</returns>
-        private static Expression RegisterMappingInternal(Type sourceType, Type mappingType, int depth = 0)
+        private static Expression RegisterMappingInternal(Type sourceType, Type mappingType, bool checkCollectionsForNull, int depth = 0)
         {
             if (depth > CurrentConfiguration.MaximumRecursionDepth && CurrentConfiguration.MaximumRecursionDepth > 1)
                 throw new InvalidOperationException($"The mapping between {sourceType} and {mappingType} seems to have caused an infinite recursion of mappings.");
 
-            Dictionary<Type, Expression> mappings;
-            if (!StaticMappings.TryGetValue(sourceType, out mappings))
-                StaticMappings[sourceType] = mappings = new Dictionary<Type, Expression>();
+            if (!StaticMappings.TryGetValue(sourceType, out Dictionary<Type, Expression> mappings))
+            {
+                lock (syncRoot)
+                {
+                    if (!StaticMappings.TryGetValue(sourceType, out mappings))
+                        StaticMappings[sourceType] = mappings = new Dictionary<Type, Expression>();
+                }
+            }
 
-            if (mappingType.GetConstructor(new Type[0]) != null)
-                return mappings[mappingType] = typeof(QueryMutator).GetMethods(BindingFlags.Static | BindingFlags.NonPublic).First(m => m.Name == nameof(QueryMutator.GenerateMapping)).MakeGenericMethod(sourceType, mappingType).Invoke(null, new object[] { Expression.Parameter(sourceType, sourceType.Name[0].ToString().ToLower()), new List<MemberBinding>(), depth + 1 }) as Expression;
+            if (mappingType.GetTypeInfo().DeclaredConstructors.Any(c => c.IsPublic && c.GetParameters().Length == 0))
+            {
+                return mappings[mappingType] = typeof(QueryMutator).GetTypeInfo()
+                    .DeclaredMethods.First(m => m.IsStatic && !m.IsPublic && m.Name == nameof(QueryMutator.GenerateMapping))
+                    .MakeGenericMethod(sourceType, mappingType)
+                    .Invoke(null, new object[] { Expression.Parameter(sourceType, sourceType.Name[0].ToString().ToLower()), new List<MemberBinding>(), checkCollectionsForNull, depth + 1 }) as Expression;
+            }
 
             return null;
         }
@@ -248,7 +339,8 @@ namespace System.Linq
         /// </summary>
         /// <typeparam name="TSource">The source type to automatically map the properties from.</typeparam>
         /// <typeparam name="TMap">The map type to automatically map the properties to.</typeparam>
-        public static void RegisterMapping<TSource, TMap>() where TMap : new() => RegisterMappingInternal(typeof(TSource), typeof(TMap));
+        /// <param name="checkCollectionsForNull">Indicates whether to generate conditional null mapping for collections in the given type.</param>
+        public static void RegisterMapping<TSource, TMap>(bool checkCollectionsForNull) where TMap : new() => RegisterMappingInternal(typeof(TSource), typeof(TMap), checkCollectionsForNull);
 
         /// <summary>
         /// Automatically register a mapping between the source and map types. Use this method when using reflection to explore the types in an
@@ -256,7 +348,8 @@ namespace System.Linq
         /// </summary>
         /// <param name="sourceType">The source type to automatically map the properties from.</param>
         /// <param name="mappingType">The map type to automatically map the properties to.</param>
-        public static void RegisterMapping(Type sourceType, Type mappingType) => RegisterMappingInternal(sourceType, mappingType);
+        /// <param name="checkCollectionsForNull">Indicates whether to generate conditional null mapping for collections in the given type.</param>
+        public static void RegisterMapping(Type sourceType, Type mappingType, bool checkCollectionsForNull) => RegisterMappingInternal(sourceType, mappingType, checkCollectionsForNull);
 
         /// <summary>
         /// Register a manual mapping between the source and map types for retrieval and expression generation.
@@ -266,8 +359,7 @@ namespace System.Linq
         /// <param name="mapping">The mapping expression to store for retrieval and expression generation.</param>
         public static void RegisterMapping<TSource, TMap>(Expression<Func<TSource, TMap>> mapping) where TMap : new()
         {
-            Dictionary<Type, Expression> mappings;
-            if (!StaticMappings.TryGetValue(typeof(TSource), out mappings))
+            if (!StaticMappings.TryGetValue(typeof(TSource), out Dictionary<Type, Expression> mappings))
                 StaticMappings[typeof(TSource)] = mappings = new Dictionary<Type, Expression>();
 
             mappings[typeof(TMap)] = mapping;
@@ -288,9 +380,10 @@ namespace System.Linq
         /// <typeparam name="TMap">The type to map to. When depending on automatic generation, the properties with the same property names in the 
         /// source and map types are tried to map.</typeparam>
         /// <param name="source">The source to map to a target using the automatically generated and manually registered expressions.</param>
+        /// <param name="checkCollectionsForNull">Indicates whether to generate conditional null mapping for collections in the given type.</param>
         /// <returns>The mapped <see cref="IQueryable{TMap}"/> instance.</returns>
-        public static IQueryable<TMap> MapTo<TSource, TMap>(this IQueryable<TSource> source) where TMap : new()
-            => source.Select(GetMapping<TSource, TMap>());
+        public static IQueryable<TMap> MapTo<TSource, TMap>(this IQueryable<TSource> source, bool checkCollectionsForNull = false) where TMap : new()
+            => source.Select(GetMapping<TSource, TMap>(checkCollectionsForNull));
 
         /// <summary>
         /// Automatically map the source type to the target type using a merging expression to merge with. If previously registered, uses the 
@@ -304,8 +397,8 @@ namespace System.Linq
         /// <param name="mergeWith">The <see cref="Expression"/> to merge the automatic mapping with. The <see cref="Expression"/> has to be a 
         /// simple object initializer, otherwise a runtime exception will be thrown.</param>
         /// <returns>The mapped <see cref="IQueryable{TMap}"/> instance.</returns>
-        public static IQueryable<TMap> MapTo<TSource, TMap>(this IQueryable<TSource> source, Expression<Func<TSource, TMap>> mergeWith) where TMap : new()
-            => source.Select(GenerateMapping<TSource, TMap>(mergeWith.Parameters.Single(), (mergeWith.Body as MemberInitExpression).Bindings.ToList()));
+        public static IQueryable<TMap> MapTo<TSource, TMap>(this IQueryable<TSource> source, Expression<Func<TSource, TMap>> mergeWith, bool checkCollectionsForNull = false) where TMap : new()
+            => source.Select(GenerateMapping<TSource, TMap>(mergeWith.Parameters.Single(), (mergeWith.Body as MemberInitExpression).Bindings.ToList(), checkCollectionsForNull));
 
         /// <summary>
         /// Automatically map the source type to the target type and call <see cref="Enumerable.ToList"/> to pull it to application memory. If 
@@ -352,8 +445,8 @@ namespace System.Linq
         /// source and map types are tried to map.</typeparam>
         /// <param name="source">The source to map to a target using the automatically generated and manually registered expressions.</param>
         /// <returns>The mapped <see cref="IQueryable{TMap}"/> instance.</returns>
-        public static IEnumerable<TMap> MapTo<TSource, TMap>(this IEnumerable<TSource> source) where TMap : new()
-            => source.Select(GetMapping<TSource, TMap>().Compile());
+        public static IEnumerable<TMap> MapTo<TSource, TMap>(this IEnumerable<TSource> source, bool checkCollectionsForNull = true) where TMap : new()
+            => source.Select(GetMapping<TSource, TMap>(checkCollectionsForNull).Compile());
 
         /// <summary>
         /// Automatically map the source type to the target type using a merging expression to merge with. If previously registered, uses the 
@@ -368,8 +461,8 @@ namespace System.Linq
         /// <param name="mergeWith">The <see cref="Expression"/> to merge the automatic mapping with. The <see cref="Expression"/> has to be a 
         /// simple object initializer, otherwise a runtime exception will be thrown.</param>
         /// <returns>The mapped <see cref="IQueryable{TMap}"/> instance.</returns>
-        public static IEnumerable<TMap> MapTo<TSource, TMap>(this IEnumerable<TSource> source, Expression<Func<TSource, TMap>> mergeWith) where TMap : new()
-            => source.Select(GenerateMapping<TSource, TMap>(mergeWith.Parameters.Single(), (mergeWith.Body as MemberInitExpression).Bindings.ToList()).Compile());
+        public static IEnumerable<TMap> MapTo<TSource, TMap>(this IEnumerable<TSource> source, Expression<Func<TSource, TMap>> mergeWith, bool checkCollectionsForNull = true) where TMap : new()
+            => source.Select(GenerateMapping<TSource, TMap>(mergeWith.Parameters.Single(), (mergeWith.Body as MemberInitExpression).Bindings.ToList(), checkCollectionsForNull).Compile());
 
         /// <summary>
         /// Automatically map the source type to the target type using a merging expression to merge with and call <see cref="Enumerable.ToList"/>

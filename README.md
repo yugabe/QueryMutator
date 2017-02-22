@@ -3,6 +3,13 @@ QueryMutator
 
 ### Queryable and Enumerable extensions for automapping objects and mapping multiple expressions into one.
 
+What's new in 1.3.0-beta?
+-------------------------
+* There is now an option to choose how collections will be mapped based on a certain phenomena (a Linq-to-Entities 
+Expression should not check whether a collection is null, but an object-to-object mapping should).
+* QueryMutator now targets .NET Standard 1.0, so it is compatible with .NET Framework 4.5 and up, .NET Core 1.0 and 
+up, other .NET Standard libraries 1.0 and up, as well as any other .NET Standard-capable runtime. Yay!
+
 What's new in 1.2.0-beta?
 -------------------------
 * Easily make a shallow copy of an object.
@@ -26,9 +33,8 @@ NullReferenceException if the object is null.
 What's it for?
 --------------
 
-It's an object mapper for .NET (4.5.1, 4.6.1) and .NET Core (Framework 5.4). If you ever tried to map objects 
-from an IQueryable to a custom 
-type of your own, you probably saw and wrote lots of code like this:
+It's an object mapper for any .NET runtime. If you ever tried to map objects 
+from an IQueryable to a custom type of your own, you probably saw and wrote lots of code like this:
 ```c#
 List<UserDto> users;
 using (var ctx = new MyContext())
