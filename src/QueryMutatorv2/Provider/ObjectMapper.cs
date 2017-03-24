@@ -51,7 +51,7 @@ namespace QueryMutatorv2.Provider
                   Expression.MemberInit(Expression.New(mapType), memberBindings)
               ), parameter);
         }
-        public static TMap To<TSource, TMap>(this Mapable<TSource> source) where TMap : new()
+        public static TMap To<TSource, TMap>(this IMapable<TSource> source) where TMap : new()
         {
             Type sourceType = typeof(TSource), mapType = typeof(TMap);
 
