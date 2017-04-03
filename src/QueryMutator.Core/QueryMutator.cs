@@ -32,7 +32,7 @@ namespace System.Linq
             /// <typeparamref name="TSource"/> and <typeparamref name="TMap"/> generic type parameters) as the value for the 
             /// <typeparamref name="TMap"/> type key.
             /// </summary>
-            internal Dictionary<Type, Dictionary<Type, Expression>> Mappings { get; } = new Dictionary<Type, Dictionary<Type, Expression>>();
+            internal Dictionary<Type, Dictionary<Type, LambdaExpression>> Mappings { get; } = new Dictionary<Type, Dictionary<Type, LambdaExpression>>();
 
             /// <summary>
             /// Setting this property to true generates a missing mapping on demand (at runtime) instead of throwing an 
@@ -64,13 +64,13 @@ namespace System.Linq
         /// <summary>
         /// A shorthand accessor for the <see cref="CurrentConfiguration"/> object's <see cref="Configuration.Mappings"/> property.
         /// </summary>
-        private static Dictionary<Type, Dictionary<Type, Expression>> StaticMappings => CurrentConfiguration.Mappings;
+        private static Dictionary<Type, Dictionary<Type, LambdaExpression>> StaticMappings => CurrentConfiguration.Mappings;
 
         #region Mapping generation and retrieval
 
         /// <summary>
         /// Helper method to generate a <see cref="MemberAssignment"/> <see cref="Expression"/> in the following form: 
-        /// <c>mapProperty = new [] { source.sourceProperty }.AsQueryable().Select(mapping).FirstOrDefault()</c>.
+        /// <c>mapProperty = new [] { source.sourceProperty }.Select(mapping).FirstOrDefault()</c>.
         /// This way a single property can be mapped using the queryable expression mapping selector.
         /// </summary>
         /// <param name="parameter">The input parameter being bound for the surrounding <see cref="LambdaExpression"/>.</param>
@@ -78,12 +78,12 @@ namespace System.Linq
         /// <param name="mapProperty">The property to map to using the provided mapping.</param>
         /// <param name="mapping">The mapping used to map the <paramref name="sourceProperty"/> to the <paramref name="mapProperty"/>.</param>
         /// <returns>The <see cref="MemberAssignment"/> <see cref="Expression"/> that can be used in an object initialization expression.</returns>
-        private static MemberAssignment GenerateQueryableBinding(ParameterExpression parameter, PropertyInfo sourceProperty, PropertyInfo mapProperty, Expression mapping)
+        private static MemberAssignment GenerateQueryableBinding(ParameterExpression parameter, PropertyInfo sourceProperty, PropertyInfo mapProperty, LambdaExpression mapping)
             => Expression.Bind(mapProperty,
-                Expression.Call(typeof(Queryable), nameof(Queryable.FirstOrDefault), new[] { mapProperty.PropertyType },
-                    Expression.Call(typeof(Queryable), nameof(Queryable.Select), new[] { sourceProperty.PropertyType, mapProperty.PropertyType },
-                        Expression.Call(typeof(Queryable), nameof(Queryable.AsQueryable), new[] { sourceProperty.PropertyType }, Expression.NewArrayInit(sourceProperty.PropertyType, Expression.PropertyOrField(parameter, sourceProperty.Name))),
-                            Expression.Constant(mapping))));
+                Expression.Call(typeof(Enumerable), nameof(Enumerable.FirstOrDefault), new[] { mapProperty.PropertyType },
+                    Expression.Call(typeof(Enumerable), nameof(Enumerable.Select), new[] { sourceProperty.PropertyType, mapProperty.PropertyType },
+                        Expression.NewArrayInit(sourceProperty.PropertyType, Expression.PropertyOrField(parameter, sourceProperty.Name)),//),
+                            mapping)));
 
         /// <summary>
         /// Generates a mapping dynamically between the given type parameters.
@@ -104,16 +104,16 @@ namespace System.Linq
 
             // Temporary variables used in the main loop.
             Type collectionSourceType = null, collectionMapType = null;
-            Expression selectedMapping = null;
+            LambdaExpression selectedMapping = null;
 
             // The property names which are already bound in the memberBindings parameter.
             var boundProperties = new HashSet<string>(memberBindings.Select(m => m.Member.Name));
 
             // Iterate over the source's properties.
-            foreach (var sourceProperty in sourceType.GetRuntimeProperties().Where(p => !boundProperties.Contains(p.Name)))
+            foreach (var sourceProperty in sourceType.GetRuntimeProperties().Where(p => p.CanRead && !boundProperties.Contains(p.Name)))
             {
                 var mapProperty = mapType.GetRuntimeProperty(sourceProperty.Name);
-                if (mapProperty == null) // There is no matching property in the mapping object.
+                if (mapProperty == null || !mapProperty.CanWrite) // There is no matching property in the mapping object or it is a getter only property.
                     continue;
 
                 if (mapProperty.PropertyType.GetTypeInfo().IsAssignableFrom(sourceProperty.PropertyType.GetTypeInfo()))
@@ -136,9 +136,9 @@ namespace System.Linq
                     if (StaticMappings.Any(m => m.Key.GetTypeInfo().IsAssignableFrom(collectionSourceType.GetTypeInfo()) && (selectedMapping = m.Value.FirstOrDefault(em => em.Key.GetTypeInfo().IsAssignableFrom(collectionMapType.GetTypeInfo())).Value) != null) || (CurrentConfiguration.GenerateMappingIfNotFound && (selectedMapping = RegisterMappingInternal(collectionSourceType, collectionMapType, checkCollectionsForNull, depth + 1)) != null))
                     {
                         var falseBranch = Expression.Call(typeof(Enumerable), nameof(Enumerable.ToList), new[] { collectionMapType },
-                                        Expression.Call(typeof(Queryable), nameof(Queryable.Select), new[] { collectionSourceType, collectionMapType },
-                                            Expression.Call(typeof(Queryable), nameof(Queryable.AsQueryable), new[] { collectionSourceType }, Expression.PropertyOrField(parameter, sourceProperty.Name)),
-                                                Expression.Constant(selectedMapping)));
+                                            Expression.Call(typeof(Enumerable), nameof(Enumerable.Select), new[] { collectionSourceType, collectionMapType },
+                                                Expression.PropertyOrField(parameter, sourceProperty.Name),
+                                                    selectedMapping));
 
                         if (checkCollectionsForNull)
                         {
@@ -196,16 +196,16 @@ namespace System.Linq
         {
             var sourceType = typeof(TSource);
             var mapType = typeof(TMap);
-            if (!StaticMappings.TryGetValue(sourceType, out Dictionary<Type, Expression> mappings))
+            if (!StaticMappings.TryGetValue(sourceType, out var mappings))
             {
                 lock (syncRoot)
                 {
                     if (!StaticMappings.TryGetValue(sourceType, out mappings))
-                        StaticMappings[sourceType] = mappings = new Dictionary<Type, Expression>();
+                        StaticMappings[sourceType] = mappings = new Dictionary<Type, LambdaExpression>();
                 }
             }
 
-            if (!mappings.TryGetValue(mapType, out Expression expression)
+            if (!mappings.TryGetValue(mapType, out var expression)
                 && (!StaticMappings.Any(m => m.Key.GetTypeInfo().IsAssignableFrom(sourceType.GetTypeInfo()) && (expression = m.Value.FirstOrDefault(em => em.Key.GetTypeInfo().IsAssignableFrom(mapType.GetTypeInfo())).Value) != null))
                 && !CurrentConfiguration.GenerateMappingIfNotFound)
                 throw new InvalidOperationException($"No mapping was specified between the source type {sourceType} for type {mapType}. Use the {nameof(RegisterMapping)} method to register or replace a static mapping expression.");
@@ -309,17 +309,17 @@ namespace System.Linq
         /// <param name="depth">This parameter indicates the possible recursion depth which might be used to detect a possible infinite recursion
         /// to prevent a <see cref="StackOverflowException"/> from occuring.</param>
         /// <returns>The <see cref="Expression"/> which is stored in the <see cref="StaticMappings"/> dictionary after generation.</returns>
-        private static Expression RegisterMappingInternal(Type sourceType, Type mappingType, bool checkCollectionsForNull, int depth = 0)
+        private static LambdaExpression RegisterMappingInternal(Type sourceType, Type mappingType, bool checkCollectionsForNull, int depth = 0)
         {
             if (depth > CurrentConfiguration.MaximumRecursionDepth && CurrentConfiguration.MaximumRecursionDepth > 1)
                 throw new InvalidOperationException($"The mapping between {sourceType} and {mappingType} seems to have caused an infinite recursion of mappings.");
 
-            if (!StaticMappings.TryGetValue(sourceType, out Dictionary<Type, Expression> mappings))
+            if (!StaticMappings.TryGetValue(sourceType, out var mappings))
             {
                 lock (syncRoot)
                 {
                     if (!StaticMappings.TryGetValue(sourceType, out mappings))
-                        StaticMappings[sourceType] = mappings = new Dictionary<Type, Expression>();
+                        StaticMappings[sourceType] = mappings = new Dictionary<Type, LambdaExpression>();
                 }
             }
 
@@ -328,7 +328,7 @@ namespace System.Linq
                 return mappings[mappingType] = typeof(QueryMutator).GetTypeInfo()
                     .DeclaredMethods.First(m => m.IsStatic && !m.IsPublic && m.Name == nameof(QueryMutator.GenerateMapping))
                     .MakeGenericMethod(sourceType, mappingType)
-                    .Invoke(null, new object[] { Expression.Parameter(sourceType, sourceType.Name[0].ToString().ToLower()), new List<MemberBinding>(), checkCollectionsForNull, depth + 1 }) as Expression;
+                    .Invoke(null, new object[] { Expression.Parameter(sourceType, sourceType.Name[0].ToString().ToLower()), new List<MemberBinding>(), checkCollectionsForNull, depth + 1 }) as LambdaExpression;
             }
 
             return null;
@@ -359,8 +359,8 @@ namespace System.Linq
         /// <param name="mapping">The mapping expression to store for retrieval and expression generation.</param>
         public static void RegisterMapping<TSource, TMap>(Expression<Func<TSource, TMap>> mapping) where TMap : new()
         {
-            if (!StaticMappings.TryGetValue(typeof(TSource), out Dictionary<Type, Expression> mappings))
-                StaticMappings[typeof(TSource)] = mappings = new Dictionary<Type, Expression>();
+            if (!StaticMappings.TryGetValue(typeof(TSource), out var mappings))
+                StaticMappings[typeof(TSource)] = mappings = new Dictionary<Type, LambdaExpression>();
 
             mappings[typeof(TMap)] = mapping;
         }

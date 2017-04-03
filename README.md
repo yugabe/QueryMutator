@@ -3,6 +3,13 @@ QueryMutator
 
 ### Queryable and Enumerable extensions for automapping objects and mapping multiple expressions into one.
 
+What's new in 1.3.1?
+* Finally, QueryMutator is out of beta! Most scenarios should work as expected as long as you use the mapping
+behavior as intended. Even though QueryMutator is out of beta, be sure to thoroughly test your application. If you
+find a bug or would like a feature, don't hesitate to open an issue here on GitHub, or review the code and submit 
+a pull request. Be sure to check it out and keep an eye out for QueryMutator v2!
+* Fixed bugs occuring in certain versions of .NET Standard and EF Core where AsQueryable was not implemented.
+
 What's new in 1.3.0-beta?
 -------------------------
 * There is now an option to choose how collections will be mapped based on a certain phenomena (a Linq-to-Entities 
@@ -60,7 +67,9 @@ using (var ctx = new MyContext())
 ```
 
 QueryMutator matches properties by name, and tries to match the object types against each other. It works 
-by recursively transversing the type graphs.
+by recursively transversing the type graphs. Do _not_ try to mutate recursive data structures, as it might
+result in unwanted behavior! First and foremost QueryMutator should be used to map and mutate between an
+entity type and a DTO to reduce lots of boilerplate code to a single method call.
 
 Why not just use AutoMapper instead?
 ------------------------------------
