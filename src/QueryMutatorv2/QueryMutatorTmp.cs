@@ -12,7 +12,7 @@ namespace QueryMutatorv2
         private static readonly object syncRoot = new object();
          
 
-        public static Mapable<T> Map<T>(this T Source)
+        public static IMapable<T> Map<T>(this T Source)
         {
             return new Mapable<T>(Source);
         }

@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
-namespace QueryMutatorv2.Provider
+namespace QueryMutatorv2
 {
     public static class ObjectMapper
     {
@@ -23,7 +23,7 @@ namespace QueryMutatorv2.Provider
             var cc = new ConventionContext();
             cc.storage.Add("Parameter", parameter);
             // Iterate over the source's properties.
-            foreach (var sourceProperty in sourceType.GetRuntimeProperties().Where(p => !boundProperties.Contains(p.Name)))
+            foreach (var sourceProperty in sourceType.GetRuntimeProperties().Where(p => p.CanRead && !boundProperties.Contains(p.Name)))
             {
 
                 foreach (var mapProperty in mapType.GetRuntimeProperties())
@@ -51,9 +51,9 @@ namespace QueryMutatorv2.Provider
                   Expression.MemberInit(Expression.New(mapType), memberBindings)
               ), parameter);
         }
-        public static TMap To<TSource, TMap>(this IMapable<TSource> source) where TMap : new()
+        public static TMap To<TMap>(this IMapable source) where TMap : new()
         {
-            Type sourceType = typeof(TSource), mapType = typeof(TMap);
+            Type sourceType = source.Source.GetType(), mapType = typeof(TMap);
 
             Expression.Parameter(typeof(TSource), typeof(TSource).Name[0].ToString().ToLower());
             return  GenerateMapping<TSource, TMap>(Expression.Parameter(sourceType, sourceType.Name[0].ToString().ToLower()),

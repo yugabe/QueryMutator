@@ -4,3 +4,5 @@
 obj
 bin
 project.lock.json
+/src/QueryMutator.Core
+/src/QueryMutator.Core

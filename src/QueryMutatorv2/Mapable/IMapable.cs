@@ -4,9 +4,12 @@ using System.Text;
 
 namespace QueryMutatorv2
 {
-   public interface IMapable<T>  
+    public interface IMapable
     {
-        T Source { get; }
-
+        object Source { get; }
+    }
+    public interface IMapable<T> : IMapable
+    {
+        new T Source { get; }
     }
 }
