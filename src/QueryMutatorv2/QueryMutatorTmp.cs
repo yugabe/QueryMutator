@@ -10,7 +10,7 @@ namespace QueryMutatorv2
     public static class QueryMutatorTmp
     {
         private static readonly object syncRoot = new object();
-         
+
 
         public static IMapable<T> Map<T>(this T Source)
         {
@@ -69,7 +69,7 @@ namespace QueryMutatorv2
                 {
                     // If it is a collection mapping that is not assignable because of variance, try explicit mapping between the two using already registered static mappings or try to generate them. Watch out for infinite recursion.
                     if (CurrentConfiguration.Mappings.Any(m => m.Key.GetTypeInfo().IsAssignableFrom(collectionSourceType.GetTypeInfo())
-                    && (selectedMapping = m.Value.FirstOrDefault(em => em.Key.GetTypeInfo().IsAssignableFrom(collectionMapType.GetTypeInfo())).Value) != null) 
+                    && (selectedMapping = m.Value.FirstOrDefault(em => em.Key.GetTypeInfo().IsAssignableFrom(collectionMapType.GetTypeInfo())).Value) != null)
                     || (CurrentConfiguration.GenerateMappingIfNotFound && (selectedMapping = RegisterMappingInternal(collectionSourceType, collectionMapType, checkCollectionsForNull, depth + 1)) != null))
                     {
                         var falseBranch = Expression.Call(typeof(Enumerable), nameof(Enumerable.ToList), new[] { collectionMapType },
@@ -184,7 +184,7 @@ namespace QueryMutatorv2
         /// <typeparam name="TSource">The source type to automatically map the properties from.</typeparam>
         /// <typeparam name="TMap">The map type to automatically map the properties to.</typeparam>
         /// <param name="checkCollectionsForNull">Indicates whether to generate conditional null mapping for collections in the given type.</param>
-        public static void RegisterMapping<TSource, TMap>(bool checkCollectionsForNull) where TMap : new() => 
+        public static void RegisterMapping<TSource, TMap>(bool checkCollectionsForNull) where TMap : new() =>
             RegisterMappingInternal(typeof(TSource), typeof(TMap), checkCollectionsForNull);
 
         /// <summary>
@@ -209,7 +209,7 @@ namespace QueryMutatorv2
             }
 
             if (!mappings.TryGetValue(mapType, out Expression expression)
-                && (!CurrentConfiguration.Mappings.Any(m => m.Key.GetTypeInfo().IsAssignableFrom(sourceType.GetTypeInfo()) 
+                && (!CurrentConfiguration.Mappings.Any(m => m.Key.GetTypeInfo().IsAssignableFrom(sourceType.GetTypeInfo())
                     && (expression = m.Value.FirstOrDefault(em => em.Key.GetTypeInfo().IsAssignableFrom(mapType.GetTypeInfo())).Value) != null))
                 && !CurrentConfiguration.GenerateMappingIfNotFound)
                 throw new InvalidOperationException($"No mapping was specified between the source type {sourceType} for type {mapType}. Use the {nameof(RegisterMapping)} method to register or replace a static mapping expression.");

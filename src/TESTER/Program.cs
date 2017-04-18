@@ -1,4 +1,4 @@
-﻿using QueryMutatorv2; 
+﻿using QueryMutatorv2;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,7 +25,7 @@ namespace TESTER
             
             var kutya=new Kutya { name="asdsadasd",labak=5};
             var a= kutya.Map() ;
-            Cica c = a.To<Cica>();
+            Cica c = a.To<Kutya,Cica>();
             Console.WriteLine(c.labak);
         }
     }

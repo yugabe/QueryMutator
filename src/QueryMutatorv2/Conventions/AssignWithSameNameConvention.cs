@@ -6,7 +6,7 @@ using System.Text;
 
 namespace QueryMutatorv2.Conventions
 {
-    class AssignWithSameNameConvention : IConvention
+    public class AssignWithSameNameConvention : IConvention
     {
        
         public bool Apply(object Source, object Destination, ConventionContext Context)
@@ -18,7 +18,7 @@ namespace QueryMutatorv2.Conventions
             if (sourceProperty.Name == mapProperty.Name &&
                 mapProperty.GetType().GetTypeInfo().IsAssignableFrom(sourceProperty.GetType().GetTypeInfo())) {
                 Object bindings;
-                Context.storage.TryGetValue("Binding", out bindings );
+                Context.storage.TryGetValue("Bindings", out bindings );
                 var typedBindings = bindings as List<MemberBinding>;
                 object parameter;
                 Context.storage.TryGetValue("Parameter", out parameter);

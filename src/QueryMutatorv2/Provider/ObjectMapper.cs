@@ -1,4 +1,5 @@
 ﻿using QueryMutatorv2.Mapable;
+using QueryMutatorv2.Provider;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,8 +43,9 @@ namespace QueryMutatorv2
 
             }
             Object bindings;
-            cc.storage.TryGetValue("Binding", out bindings);
+            cc.storage.TryGetValue("Bindings", out bindings);
             memberBindings=memberBindings.Concat(bindings as List<MemberBinding>).ToList();
+
             return Expression.Lambda<Func<TSource, TMap>>(
               Expression.Condition(
                   Expression.Equal(parameter, Expression.Constant(null, sourceType)),
@@ -51,14 +53,21 @@ namespace QueryMutatorv2
                   Expression.MemberInit(Expression.New(mapType), memberBindings)
               ), parameter);
         }
-        public static TMap To<TMap>(this IMapable source) where TMap : new()
+        public static TMap To<TSource,TMap>(this IMapable source) where TMap : new()
         {
             Type sourceType = source.Source.GetType(), mapType = typeof(TMap);
 
-            Expression.Parameter(typeof(TSource), typeof(TSource).Name[0].ToString().ToLower());
-            return  GenerateMapping<TSource, TMap>(Expression.Parameter(sourceType, sourceType.Name[0].ToString().ToLower()),
-                 new List<MemberBinding>()).Compile().Invoke(source.Source);
-            
+            Expression.Parameter(sourceType, sourceType.Name[0].ToString().ToLower());
+            var tmp1 = GenerateMapping<TSource, TMap>(Expression.Parameter(sourceType, sourceType.Name[0].ToString().ToLower()),
+                 new List<MemberBinding>());
+            System.Diagnostics.Debug.WriteLine(tmp1.ToString());
+            var tmp2 = tmp1.Compile();
+            System.Diagnostics.Debug.WriteLine(tmp2.ToString());
+            TMap result =tmp2.Invoke((TSource)source.Source);
+            System.Diagnostics.Debug.WriteLine(result.ToString());
+            return result;
+
+
         }
         public static TMap To<TSource, TMap>(this TSource source, Expression Binding) where TMap : new() where TSource : IMapable<TSource>
         {

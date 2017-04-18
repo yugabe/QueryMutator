@@ -9,7 +9,7 @@ namespace QueryMutatorv2.Provider
 {
     public static class MappingProvider
     {
-        public static ProviderConfiguration CurrentConfiguration;
+        public static ProviderConfiguration CurrentConfiguration=new ProviderConfiguration();
 
 
         private static readonly object syncRoot = new object();
