@@ -8,20 +8,18 @@ namespace QueryMutatorv2.Conventions
 {
     public class AssignWithSameNameConvention : IConvention
     {
-       
-        public bool Apply(object Source, object Destination, ConventionContext Context)
+
+        public bool Apply(object source, object destination, ConventionContext context)
         {
-            var sourceProperty = (PropertyInfo) Source;
-            var mapProperty = (PropertyInfo) Destination ;
-            
-            Console.WriteLine(sourceProperty.Name + "  "+ mapProperty.Name);
+            var sourceProperty = (PropertyInfo)source;
+            var mapProperty = (PropertyInfo)destination;
+
             if (sourceProperty.Name == mapProperty.Name &&
-                mapProperty.GetType().GetTypeInfo().IsAssignableFrom(sourceProperty.GetType().GetTypeInfo())) {
-                Object bindings;
-                Context.storage.TryGetValue("Bindings", out bindings );
+                mapProperty.GetType().GetTypeInfo().IsAssignableFrom(sourceProperty.GetType().GetTypeInfo()))
+            {
+                context.storage.TryGetValue("Bindings", out var bindings);
                 var typedBindings = bindings as List<MemberBinding>;
-                object parameter;
-                Context.storage.TryGetValue("Parameter", out parameter);
+                context.storage.TryGetValue("Parameter", out object parameter);
                 typedBindings.Add(Expression.Bind(mapProperty, Expression.PropertyOrField(parameter as ParameterExpression, sourceProperty.Name)));
 
 
