@@ -4,6 +4,7 @@ QueryMutator
 ### Queryable and Enumerable extensions for automapping objects and mapping multiple expressions into one.
 
 What's new in 1.3.1?
+-------------------------
 * Finally, QueryMutator is out of beta! Most scenarios should work as expected as long as you use the mapping
 behavior as intended. Even though QueryMutator is out of beta, be sure to thoroughly test your application. If you
 find a bug or would like a feature, don't hesitate to open an issue here on GitHub, or review the code and submit 
