@@ -9,7 +9,7 @@ namespace QueryMutatorv2.Provider
 {
     public static class MappingProvider
     {
-        public static ProviderConfiguration CurrentConfiguration=new ProviderConfiguration();
+        public static ProviderConfiguration CurrentConfiguration = new ProviderConfiguration();
 
 
         private static readonly object syncRoot = new object();
@@ -158,7 +158,8 @@ namespace QueryMutatorv2.Provider
                     sourceProperty.PropertyType.GetTypeInfo().ImplementedInterfaces.Concat(new[] { sourceProperty.PropertyType }).Any(i => i.GetTypeInfo().IsGenericType && (i.GetGenericTypeDefinition() == typeof(ICollection<>) || i.GetGenericTypeDefinition() == typeof(IQueryable<>)) && (collectionSourceType = i.GenericTypeArguments.FirstOrDefault()) != null) &&
                     mapProperty.PropertyType.GetTypeInfo().ImplementedInterfaces.Concat(new[] { mapProperty.PropertyType }).Any(i => i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>) && (collectionMapType = i.GenericTypeArguments.FirstOrDefault()) != null) &&
                     mapProperty.PropertyType.GetTypeInfo().IsAssignableFrom(typeof(List<>).MakeGenericType(collectionMapType).GetTypeInfo())
-                    ) {
+                    )
+                {
                     //{
                     //    // If it is a collection mapping that is not assignable because of variance, try explicit mapping between the two using already registered static mappings or try to generate them. Watch out for infinite recursion.
                     //    if (CurrentConfiguration.Mappings.Any(m => m.Key.GetTypeInfo().IsAssignableFrom(collectionSourceType.GetTypeInfo()) && (selectedMapping = m.Value.FirstOrDefault(em => em.Key.GetTypeInfo().IsAssignableFrom(collectionMapType.GetTypeInfo())).Value) != null) || (CurrentConfiguration.GenerateMappingIfNotFound && (selectedMapping = RegisterMappingInternal(collectionSourceType, collectionMapType, checkCollectionsForNull, depth + 1)) != null))

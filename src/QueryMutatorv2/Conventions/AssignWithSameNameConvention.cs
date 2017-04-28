@@ -9,7 +9,7 @@ namespace QueryMutatorv2.Conventions
     public class AssignWithSameNameConvention : IConvention
     {
 
-        public bool Apply(object source, object destination, ConventionContext context)
+        public bool Apply<TSource>(object source, object destination, ConventionContext context)
         {
             var sourceProperty = (PropertyInfo)source;
             var mapProperty = (PropertyInfo)destination;

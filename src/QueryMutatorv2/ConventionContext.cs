@@ -8,7 +8,8 @@ namespace QueryMutatorv2
     {
         public Dictionary<string, Object> storage;
         int CurrentRecursionDepth { get; set; }
-        public ConventionContext() {
+        public ConventionContext()
+        {
             storage = new Dictionary<string, object>();
             storage.Add("Bindings", new List<MemberBinding>());
             CurrentRecursionDepth = 0;

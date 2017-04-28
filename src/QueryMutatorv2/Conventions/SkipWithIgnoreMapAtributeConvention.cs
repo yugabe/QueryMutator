@@ -9,6 +9,6 @@ namespace QueryMutatorv2.Conventions
 {
     public class SkipWithIgnoreMapAtributeConvention : IConvention
     {
-        public bool Apply(object Source, object Destination, ConventionContext Context) => ((PropertyInfo)Source).GetCustomAttribute<IgnoreMap>(true) != null;
+        public bool Apply<TSource>(object Source, object Destination, ConventionContext Context) => ((PropertyInfo)Source).GetCustomAttribute<IgnoreMap>(true) != null;
     }
 }

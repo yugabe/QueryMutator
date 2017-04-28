@@ -13,7 +13,7 @@ namespace BasicTests
         [IgnoreMap]
         public string Name { get; set; }
         public int Labak { get; set; }
-
+        public Cica AmisCica { get; set; }
         // TODO #3: rekurzív expression
         //public Kutya OtherDog { get; set; }
 
@@ -25,6 +25,8 @@ namespace BasicTests
         public string Name { get; set; }
         public int Labak { get; set; }
         //public Cica OtherDog { get; set; }
+        public string AmisCicaName { set; get; }
+        public int AmisCicaLabak { set; get; }
 
         // TODO #1: explicit mapping
         //[MapFrom<Kutya>(k => k.Name.Length)]
@@ -72,5 +74,49 @@ namespace BasicTests
             Assert.AreNotEqual(kutya.Labak, cica.Labak);
 
         }
+
+
+        [TestMethod]
+        public void CheckBasicMappingKeepsSimpleProperty2()
+        {
+            ResetConventions();
+            MappingProvider.CurrentConfiguration.Conventions.Add(new QueryMutatorv2.Conventions.AssignWithSameNameConvention2());
+            var kutya = new Kutya { Name = "BidriBodri", Labak = 5 };
+            var cica = kutya.Map().ToV2<Kutya, Cica>();
+            Assert.AreEqual(kutya.Labak, cica.Labak);
+            Assert.AreEqual(kutya.Name, cica.Name);
+            kutya.Labak = 6;
+            Assert.AreNotEqual(kutya.Labak, cica.Labak);
+
+        }
+
+        [TestMethod]
+        public void CheckIgnoreMapConventionV2()
+        {
+            ResetConventions();
+            MappingProvider.CurrentConfiguration.Conventions.Add(new QueryMutatorv2.Conventions.SkipWithIgnoreMapAtributeConvention());
+            MappingProvider.CurrentConfiguration.Conventions.Add(new QueryMutatorv2.Conventions.AssignWithSameNameConvention2());
+            var kutya = new Kutya { Name = "BidriBodri", Labak = 5 };
+            var cica = kutya.Map().To<Kutya, Cica>();
+            Assert.AreEqual(kutya.Labak, cica.Labak);
+            Assert.AreNotEqual(kutya.Name, cica.Name);
+            kutya.Labak = 6;
+            Assert.AreNotEqual(kutya.Labak, cica.Labak);
+
+        }
+
+        [TestMethod]
+        public void CheckBasicMappingKeepsNestedProperty()
+        {
+            ResetConventions();
+            MappingProvider.CurrentConfiguration.Conventions.Add(new AssignNestedPropertityWithNameAsPath());
+            var kutya = new Kutya { Name = "BidriBodri", Labak = 5,AmisCica=new Cica { Name="Sir Nyafi Háromláb",Labak=3} };
+            var cica = kutya.Map().ToV2<Kutya, Cica>();
+            Assert.AreEqual(kutya.AmisCica.Labak, cica.AmisCicaLabak);
+            Assert.AreEqual(kutya.AmisCica.Name, cica.AmisCicaName);
+           
+
+        }
+
     }
 }
