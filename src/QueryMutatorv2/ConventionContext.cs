@@ -6,7 +6,7 @@ namespace QueryMutatorv2
 {
     public class ConventionContext
     {
-        public Dictionary<string, Object> storage;
+        public Dictionary<string, object> storage;
         int CurrentRecursionDepth { get; set; }
         public ConventionContext()
         {

@@ -109,6 +109,7 @@ namespace BasicTests
         public void CheckBasicMappingKeepsNestedProperty()
         {
             ResetConventions();
+            
             MappingProvider.CurrentConfiguration.Conventions.Add(new AssignNestedPropertityWithNameAsPath());
             var kutya = new Kutya { Name = "BidriBodri", Labak = 5,AmisCica=new Cica { Name="Sir Nyafi Háromláb",Labak=3} };
             var cica = kutya.Map().ToV2<Kutya, Cica>();
@@ -118,5 +119,39 @@ namespace BasicTests
 
         }
 
+        [TestMethod]
+        public void CheckExplicitMapping()
+        {
+
+          
+            ResetConventions();
+            MappingProvider.CurrentConfiguration.Conventions.Add(new ExplicitMappingConvention<Kutya, Cica>(c => new Cica { Name= "BidriBodri", Labak = c.Labak, AmisCicaLabak = 3,AmisCicaName=c.AmisCica.AmisCicaName }));
+            var kutya = new Kutya { Name = "BidriBodri", Labak = 5, AmisCica = new Cica { Name = "Sir Nyafi Háromláb", Labak = 3, AmisCicaLabak =2} };
+            var cica = kutya.Map().ToV2<Kutya, Cica>();
+            Assert.AreEqual(kutya.Name, cica.Name);
+         
+
+        }
+
+
+
+
+        [TestMethod]
+        public void CheckAllConvention()
+        {
+            ResetConventions();
+            MappingProvider.CurrentConfiguration.Conventions.Add(new QueryMutatorv2.Conventions.SkipWithIgnoreMapAtributeConvention());
+            MappingProvider.CurrentConfiguration.Conventions.Add(new QueryMutatorv2.Conventions.AssignWithSameNameConvention2());
+            MappingProvider.CurrentConfiguration.Conventions.Add(new AssignNestedPropertityWithNameAsPath());
+            var kutya = new Kutya { Name = "BidriBodri", Labak = 5, AmisCica = new Cica { Name = "Sir Nyafi Háromláb", Labak = 3 } };
+            var cica = kutya.Map().ToV2<Kutya, Cica>();
+            Assert.AreEqual(kutya.AmisCica.Labak, cica.AmisCicaLabak);
+            Assert.AreEqual(kutya.AmisCica.Name, cica.AmisCicaName);
+            Assert.AreEqual(kutya.Labak, cica.Labak);
+            Assert.AreNotEqual(kutya.Name, cica.Name);
+            kutya.Labak = 6;
+            Assert.AreNotEqual(kutya.Labak, cica.Labak);
+
+        }
     }
 }

@@ -122,12 +122,12 @@ namespace QueryMutatorv2
             Type sourceType = source.Source.GetType(), mapType = typeof(TMap);
 
             Expression.Parameter(sourceType, sourceType.Name[0].ToString().ToLower());
-            var tmp1 = GenerateMappingV2<TSource, TMap>(Expression.Parameter(sourceType, sourceType.Name[0].ToString().ToLower()),
+            var mapping = GenerateMappingV2<TSource, TMap>(Expression.Parameter(sourceType, sourceType.Name[0].ToString().ToLower()),
                  new List<MemberBinding>());
-            System.Diagnostics.Debug.WriteLine(tmp1.ToString());
-            var tmp2 = tmp1.Compile();
-            System.Diagnostics.Debug.WriteLine(tmp2.ToString());
-            TMap result = tmp2.Invoke((TSource)source.Source);
+            System.Diagnostics.Debug.WriteLine(mapping.ToString());
+            var coompiledMapping = mapping.Compile();
+            System.Diagnostics.Debug.WriteLine(coompiledMapping.ToString());
+            TMap result = coompiledMapping.Invoke((TSource)source.Source);
             System.Diagnostics.Debug.WriteLine(result.ToString());
             return result;
 

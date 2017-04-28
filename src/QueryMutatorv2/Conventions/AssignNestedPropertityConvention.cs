@@ -24,17 +24,17 @@ namespace QueryMutatorv2.Conventions
                 if (!(ti.IsPrimitive || sourceProperty.PropertyType == typeof(string)) && mapProperty.Name.ToLower().StartsWith(sourceProperty.Name.ToLower()))
                 {
                     var propertyName = mapProperty.Name.Substring(sourceProperty.Name.Length);
-                    var nestedSourceProperty=sourceProperty.PropertyType.GetRuntimeProperty(propertyName);
+                    var nestedSourceProperty = sourceProperty.PropertyType.GetRuntimeProperty(propertyName);
                     Boolean test3 = nestedSourceProperty != null;
                     var test5 = mapProperty.PropertyType.GetTypeInfo();
                     Boolean test4 = mapProperty.PropertyType.GetTypeInfo().IsAssignableFrom(nestedSourceProperty.PropertyType.GetTypeInfo());
-                    if (nestedSourceProperty!=null &&
+                    if (nestedSourceProperty != null &&
                         mapProperty.PropertyType.GetTypeInfo().IsAssignableFrom(nestedSourceProperty.PropertyType.GetTypeInfo()))
                     {
                         context.storage.TryGetValue("Bindings", out var bindings);
                         var typedBindings = bindings as List<MemberBinding>;
                         context.storage.TryGetValue("Parameter", out object parameter);
-                        typedBindings.Add(Expression.Bind(mapProperty,Expression.PropertyOrField( Expression.PropertyOrField(parameter as ParameterExpression, sourceProperty.Name), nestedSourceProperty.Name)));
+                        typedBindings.Add(Expression.Bind(mapProperty, Expression.PropertyOrField(Expression.PropertyOrField(parameter as ParameterExpression, sourceProperty.Name), nestedSourceProperty.Name)));
                         success = true;
 
 
@@ -44,10 +44,6 @@ namespace QueryMutatorv2.Conventions
                 }
 
             }
-
-
-
-
 
 
             return success;

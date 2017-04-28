@@ -8,6 +8,6 @@ namespace QueryMutatorv2.Conventions
     public interface IConvention
     {
 
-        bool Apply<TSource>(object Source, object Destination, ConventionContext Context);
+        bool Apply<TMap>(object source, object destination, ConventionContext context);
     }
 }
