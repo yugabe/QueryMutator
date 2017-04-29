@@ -8,6 +8,7 @@ namespace QueryMutatorv2
 {
     public class ProviderConfiguration
     {
+        public bool AlwaysGenerateMapping { get; set; } = true;
         public bool GenerateMappingIfNotFound { get; set; } = true;
         public bool ThrowOnPropertyNotMappable { get; set; } = false;
         public List<IConvention> Conventions { get; set; } = new List<IConvention>();

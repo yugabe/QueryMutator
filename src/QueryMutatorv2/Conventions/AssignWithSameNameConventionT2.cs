@@ -6,6 +6,10 @@ using System.Text;
 
 namespace QueryMutatorv2.Conventions
 {
+    /// <summary>
+    /// Convention which maps two  property with the same name to each other
+    /// if the source is assignable to the destination property
+    /// </summary>
     public class AssignWithSameNameConvention2 : IConvention
     {
 
@@ -21,13 +25,17 @@ namespace QueryMutatorv2.Conventions
                 if (sourceProperty.Name == mapProperty.Name &&
                 mapProperty.GetType().GetTypeInfo().IsAssignableFrom(sourceProperty.GetType().GetTypeInfo()))
                 {
-                    context.storage.TryGetValue("Bindings", out var bindings);
-                    var typedBindings = bindings as List<MemberBinding>;
-                    context.storage.TryGetValue("Parameter", out object parameter);
-                    typedBindings.Add(Expression.Bind(mapProperty, Expression.PropertyOrField(parameter as ParameterExpression, sourceProperty.Name)));
+                    if (!context.BoundedPropertys.ContainsKey(mapProperty.Name))
+                    {
+                        context.storage.TryGetValue("Bindings", out var bindings);
+                        var typedBindings = bindings as List<MemberBinding>;
+                        context.storage.TryGetValue("Parameter", out object parameter);
+                        typedBindings.Add(Expression.Bind(mapProperty, Expression.PropertyOrField(parameter as ParameterExpression, sourceProperty.Name)));
 
-
-                    return true;
+                        context.BoundedPropertys.Add(mapProperty.Name, true);
+                        return true;
+                    }
+                    else return false;
                 }
 
             }

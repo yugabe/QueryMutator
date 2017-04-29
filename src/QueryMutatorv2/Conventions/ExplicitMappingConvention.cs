@@ -8,10 +8,17 @@ namespace QueryMutatorv2.Conventions
 {
     public class ExplicitMappingConvention<TSource, TMap2> : IConvention
     {
+        /// <summary>
+        /// The key of the entry of the context.storage which identifies a dictionary of explicit Conventions. 
+        /// </summary>
         static private string storageName = "ExplicitConventions";
         Guid id = Guid.NewGuid();
 
         Expression<Func<TSource, TMap2>> AssignExpression { get; }
+        /// <summary>
+        /// Adds the memberBindings extracted from the AssignExpression to the context.storage Bindings entry
+        /// </summary>
+        /// <param name="context">The context of the mapping passed by the <see cref="Provider.MappingProvider"></param>
         void AddBindings(ConventionContext context)
         {
             context.storage.TryGetValue("Parameter", out var param);
@@ -19,9 +26,21 @@ namespace QueryMutatorv2.Conventions
             var newbindings = (newexpr.Body as MemberInitExpression).Bindings.ToList();
             context.storage.TryGetValue("Bindings", out var bindings);
             var typedBindings = bindings as List<MemberBinding>;
-            newbindings.ForEach(b => typedBindings.Add(b));
+            newbindings.ForEach(b =>
+            {
+                if (!context.BoundedPropertys.ContainsKey(b.Member.Name))
+                {
+                    typedBindings.Add(b);
+                    context.BoundedPropertys.Add(b.Member.Name, true);
+                }
+            });
 
         }
+        /// <summary>
+        /// Adds the bindings if they are not already in the context.storage
+        /// For params see:<see cref="IConvention"/>
+        /// </summary>
+        /// <returns>true if the bindings are added else false</returns>
         public bool Apply<TMap>(object source, object destination, ConventionContext context)
         {
 
@@ -45,24 +64,26 @@ namespace QueryMutatorv2.Conventions
                     {
                         AddBindings(context);
                     }
-
-
-
                 }
-                else {
+                else
+                {
                     AddBindings(context);
                     typedExplicitConventions.Add(id, 1);
                 }
             }
 
-            return true;
+            return false;
 
         }
+
         public ExplicitMappingConvention(Expression<Func<TSource, TMap2>> assignExpression)
         {
             AssignExpression = assignExpression;
 
         }
+        /// <summary>
+        /// Rewrites a lambda Expression to use another Parameter.
+        /// </summary>
         private class LambdaRewriter
         {
             public static Expression<Func<TSource, TMap2>> Rewrite<TSource, TMap2>(Expression<Func<TSource, TMap2>> exp, ParameterExpression p)

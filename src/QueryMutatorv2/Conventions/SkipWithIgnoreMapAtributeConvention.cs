@@ -7,8 +7,12 @@ using System.Text;
 
 namespace QueryMutatorv2.Conventions
 {
+    /// <summary>
+    /// Convention which skips the mapping of propertys on the source object if the property has IgnoreMap attribute.
+    /// </summary>
     public class SkipWithIgnoreMapAtributeConvention : IConvention
     {
-        public bool Apply<TSource>(object Source, object Destination, ConventionContext Context) => ((PropertyInfo)Source).GetCustomAttribute<IgnoreMap>(true) != null;
+        public bool Apply<TSource>(object Source, object Destination, ConventionContext Context) =>
+            ((PropertyInfo)Source).GetCustomAttribute<IgnoreMap>(true) != null;
     }
 }

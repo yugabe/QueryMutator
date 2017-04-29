@@ -6,6 +6,15 @@ using System.Text;
 
 namespace QueryMutatorv2.Conventions
 {
+    /// <summary>
+    /// Convention to map nested parameters by Name 
+    /// ex:class Human{               class Brothers{
+    ///     Human Brother;   -->              ....
+    ///     int Legs;                         int BrotherLegs;
+    ///     string Name;                      string BrotherName
+    /// }
+    /// Brother.Name will be mapped to BrotherName...
+    /// </summary>
     public class AssignNestedPropertityWithNameAsPath : IConvention
     {
 
@@ -31,12 +40,15 @@ namespace QueryMutatorv2.Conventions
                     if (nestedSourceProperty != null &&
                         mapProperty.PropertyType.GetTypeInfo().IsAssignableFrom(nestedSourceProperty.PropertyType.GetTypeInfo()))
                     {
-                        context.storage.TryGetValue("Bindings", out var bindings);
-                        var typedBindings = bindings as List<MemberBinding>;
-                        context.storage.TryGetValue("Parameter", out object parameter);
-                        typedBindings.Add(Expression.Bind(mapProperty, Expression.PropertyOrField(Expression.PropertyOrField(parameter as ParameterExpression, sourceProperty.Name), nestedSourceProperty.Name)));
-                        success = true;
-
+                        if (!context.BoundedPropertys.ContainsKey(mapProperty.Name))
+                        {
+                            context.storage.TryGetValue("Bindings", out var bindings);
+                            var typedBindings = bindings as List<MemberBinding>;
+                            context.storage.TryGetValue("Parameter", out object parameter);
+                            typedBindings.Add(Expression.Bind(mapProperty, Expression.PropertyOrField(Expression.PropertyOrField(parameter as ParameterExpression, sourceProperty.Name), nestedSourceProperty.Name)));
+                            context.BoundedPropertys.Add(mapProperty.Name, true);
+                            success = true;
+                        }
 
                     }
 

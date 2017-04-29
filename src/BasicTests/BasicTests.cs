@@ -27,7 +27,7 @@ namespace BasicTests
         //public Cica OtherDog { get; set; }
         public string AmisCicaName { set; get; }
         public int AmisCicaLabak { set; get; }
-
+        public MeresiHiba meres;
         // TODO #1: explicit mapping
         //[MapFrom<Kutya>(k => k.Name.Length)]
         //[MapFrom<Majom>(k => k.Name.Length)]
@@ -36,6 +36,11 @@ namespace BasicTests
         // TODO #2: referencia fa bejárás
         //public string OtherDogName { get; set; }
         //public int OtherDogLabak { get; set; }
+    }
+    public class MeresiHiba
+    {
+        public float epszilon;
+
     }
 
     [TestClass]
@@ -109,13 +114,13 @@ namespace BasicTests
         public void CheckBasicMappingKeepsNestedProperty()
         {
             ResetConventions();
-            
+
             MappingProvider.CurrentConfiguration.Conventions.Add(new AssignNestedPropertityWithNameAsPath());
-            var kutya = new Kutya { Name = "BidriBodri", Labak = 5,AmisCica=new Cica { Name="Sir Nyafi Háromláb",Labak=3} };
+            var kutya = new Kutya { Name = "BidriBodri", Labak = 5, AmisCica = new Cica { Name = "Sir Nyafi Háromláb", Labak = 3 } };
             var cica = kutya.Map().ToV2<Kutya, Cica>();
             Assert.AreEqual(kutya.AmisCica.Labak, cica.AmisCicaLabak);
             Assert.AreEqual(kutya.AmisCica.Name, cica.AmisCicaName);
-           
+
 
         }
 
@@ -123,13 +128,13 @@ namespace BasicTests
         public void CheckExplicitMapping()
         {
 
-          
+
             ResetConventions();
-            MappingProvider.CurrentConfiguration.Conventions.Add(new ExplicitMappingConvention<Kutya, Cica>(c => new Cica { Name= "BidriBodri", Labak = c.Labak, AmisCicaLabak = 3,AmisCicaName=c.AmisCica.AmisCicaName }));
-            var kutya = new Kutya { Name = "BidriBodri", Labak = 5, AmisCica = new Cica { Name = "Sir Nyafi Háromláb", Labak = 3, AmisCicaLabak =2} };
+            MappingProvider.CurrentConfiguration.Conventions.Add(new ExplicitMappingConvention<Kutya, Cica>(c => new Cica { Name = "BidriBodri", Labak = c.Labak, AmisCicaLabak = 3, AmisCicaName = c.AmisCica.AmisCicaName }));
+            var kutya = new Kutya { Name = "BidriBodri", Labak = 5, AmisCica = new Cica { Name = "Sir Nyafi Háromláb", Labak = 3, AmisCicaLabak = 2 } };
             var cica = kutya.Map().ToV2<Kutya, Cica>();
             Assert.AreEqual(kutya.Name, cica.Name);
-         
+
 
         }
 
@@ -142,11 +147,13 @@ namespace BasicTests
             ResetConventions();
             MappingProvider.CurrentConfiguration.Conventions.Add(new QueryMutatorv2.Conventions.SkipWithIgnoreMapAtributeConvention());
             MappingProvider.CurrentConfiguration.Conventions.Add(new QueryMutatorv2.Conventions.AssignWithSameNameConvention2());
+            MappingProvider.CurrentConfiguration.Conventions.Add(new ExplicitMappingConvention<Kutya, Cica>(c => new Cica { Labak = 6, meres = new MeresiHiba { epszilon = 6.25f } }));
             MappingProvider.CurrentConfiguration.Conventions.Add(new AssignNestedPropertityWithNameAsPath());
             var kutya = new Kutya { Name = "BidriBodri", Labak = 5, AmisCica = new Cica { Name = "Sir Nyafi Háromláb", Labak = 3 } };
             var cica = kutya.Map().ToV2<Kutya, Cica>();
             Assert.AreEqual(kutya.AmisCica.Labak, cica.AmisCicaLabak);
             Assert.AreEqual(kutya.AmisCica.Name, cica.AmisCicaName);
+            Assert.AreEqual(6.25f, cica.meres.epszilon);
             Assert.AreEqual(kutya.Labak, cica.Labak);
             Assert.AreNotEqual(kutya.Name, cica.Name);
             kutya.Labak = 6;
