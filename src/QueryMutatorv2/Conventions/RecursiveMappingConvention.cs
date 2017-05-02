@@ -33,12 +33,8 @@ namespace QueryMutatorv2.Conventions
                             new List<MemberBinding>(),
                             context.CurrentRecursionDepth+1
                         });
-                        //????????????????????????????????
-                        //var falseBranch = Expression.Call(typeof(Enumerable), nameof(Enumerable.ToList), new[] { collectionMapType },
-                        //                    Expression.Call(typeof(Queryable), nameof(Queryable.Select), new[] { collectionSourceType, collectionMapType },
-                        //                        Expression.Call(typeof(Queryable), nameof(Queryable.AsQueryable), new[] { collectionSourceType }, Expression.PropertyOrField(parameter, sourceProperty.Name)),
-                        //                            Expression.Constant(selectedMapping)));
-                        //????????????????????????????????
+                        var newMemberInit=((mapping.Body as ConditionalExpression).IfFalse as MemberInitExpression) ; 
+                    
                         context.storage.TryGetValue("Bindings", out var bindings);
                    
                         var typedBindings = bindings as List<MemberBinding>;
@@ -49,8 +45,8 @@ namespace QueryMutatorv2.Conventions
                                Expression.Bind(mapProperty,
                                    Expression.Condition(
                                        test: Expression.Equal(Expression.PropertyOrField(typedParam, sourceProperty.Name), Expression.Constant(null, sourceProperty.PropertyType)),
-                                       ifTrue: Expression.Constant(null, mapping.ReturnType),
-                                       ifFalse: mapping
+                                       ifTrue: Expression.Constant(null,mapProperty.PropertyType),
+                                       ifFalse: newMemberInit
                                        )
                                    )
                                );
