@@ -133,7 +133,8 @@ namespace System.Linq
                     )
                 {
                     // If it is a collection mapping that is not assignable because of variance, try explicit mapping between the two using already registered static mappings or try to generate them. Watch out for infinite recursion.
-                    if (StaticMappings.Any(m => m.Key.GetTypeInfo().IsAssignableFrom(collectionSourceType.GetTypeInfo()) && (selectedMapping = m.Value.FirstOrDefault(em => em.Key.GetTypeInfo().IsAssignableFrom(collectionMapType.GetTypeInfo())).Value) != null) || (CurrentConfiguration.GenerateMappingIfNotFound && (selectedMapping = RegisterMappingInternal(collectionSourceType, collectionMapType, checkCollectionsForNull, depth + 1)) != null))
+                    if (StaticMappings.Any(m => m.Key.GetTypeInfo().IsAssignableFrom(collectionSourceType.GetTypeInfo()) && (selectedMapping = m.Value.FirstOrDefault(em => em.Key.GetTypeInfo().IsAssignableFrom(collectionMapType.GetTypeInfo())).Value) != null) || 
+                        (CurrentConfiguration.GenerateMappingIfNotFound && (selectedMapping = RegisterMappingInternal(collectionSourceType, collectionMapType, checkCollectionsForNull, depth + 1)) != null))
                     {
                         var falseBranch = Expression.Call(typeof(Enumerable), nameof(Enumerable.ToList), new[] { collectionMapType },
                                         Expression.Call(typeof(Queryable), nameof(Queryable.Select), new[] { collectionSourceType, collectionMapType },

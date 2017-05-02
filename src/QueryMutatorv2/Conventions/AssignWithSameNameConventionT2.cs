@@ -39,12 +39,7 @@ namespace QueryMutatorv2.Conventions
                 }
 
             }
-
-
-
-
-
-
+ 
             return false;
         }
     }

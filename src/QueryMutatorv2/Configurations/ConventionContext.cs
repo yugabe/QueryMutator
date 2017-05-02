@@ -16,14 +16,14 @@ namespace QueryMutatorv2
         /// <summary>
         /// The current recursion depth of the mapper.
         /// </summary>
-        int CurrentRecursionDepth { get; set; }
+        public int CurrentRecursionDepth { get; set; }
         public Dictionary<String, bool> BoundedPropertys = new Dictionary<string, bool>();
         public ConventionContext()
         {
           
             storage = new Dictionary<string, object>();
             storage.Add("Bindings", new List<MemberBinding>());
-            CurrentRecursionDepth = 0;
+      
         }
 
     }

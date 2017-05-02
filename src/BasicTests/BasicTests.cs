@@ -8,6 +8,13 @@ using System.Collections.Generic;
 
 namespace BasicTests
 {
+    public class RecursiveModel
+    {
+        public string Name { get; set; }
+        public int Labak { get; set; }
+        public Cica AmisCica { get; set; }
+
+    }
     public class Kutya
     {
         [IgnoreMap]
@@ -138,8 +145,39 @@ namespace BasicTests
 
         }
 
+        [TestMethod]
+        public void CheckRecursiveMapping()
+        {
 
 
+            ResetConventions();
+            MappingProvider.CurrentConfiguration.Conventions.Add(new QueryMutatorv2.Conventions.RecursiveMappingConvention());
+            MappingProvider.CurrentConfiguration.Conventions.Add(new QueryMutatorv2.Conventions.AssignWithSameNameConvention2());
+            var kutya = new Kutya
+            {
+                Name = "BidriBodri",
+                Labak = 5,
+                AmisCica = new Cica()
+                {
+                    Name = "BidriBodri",
+                    Labak = 5,
+                    AmisCicaLabak = 4,
+                    AmisCicaName = "Ser",
+                    meres = new MeresiHiba() { epszilon = 2.5f }
+                }
+            };
+             
+            var rm = kutya.Map().To<Kutya, RecursiveModel>();
+            Assert.AreEqual(kutya.Labak, rm.Labak);
+            Assert.AreEqual(kutya.Name, rm.Name);
+            Assert.AreEqual(kutya.AmisCica.Labak, rm.AmisCica.Labak);
+            Assert.AreEqual(kutya.AmisCica.Name, rm.AmisCica.Name);
+            kutya.Labak = 6;
+            Assert.AreNotEqual(kutya.Labak, rm.Labak);
+            kutya.AmisCica.Labak = 6;
+            Assert.AreNotEqual(kutya.AmisCica.Labak, rm.AmisCica.Labak);
+
+        }
 
         [TestMethod]
         public void CheckAllConvention()

@@ -21,10 +21,12 @@ namespace QueryMutatorv2.Provider
             var mapType = typeof(TMap);
 
 
-
+            if (depth >= CurrentConfiguration.MaximumRecursionDepth) return null;
+            
             // The property names which are already bound in the memberBindings parameter.
             var boundProperties = new HashSet<string>(memberBindings.Select(m => m.Member.Name));
             var cc = new ConventionContext();
+            cc.CurrentRecursionDepth = depth;
             cc.storage.Add("Parameter", parameter);
             // Iterate over the source's properties.
             foreach (var sourceProperty in sourceType.GetRuntimeProperties().Where(p => p.CanRead && !boundProperties.Contains(p.Name)))
@@ -66,7 +68,7 @@ namespace QueryMutatorv2.Provider
         /// <param name="memberBindings"></param>
         /// <param name="depth"></param>
         /// <returns></returns>
-        private static Expression<Func<TSource, TMap>> GenerateMappingV2<TSource, TMap>(ParameterExpression parameter, List<MemberBinding> memberBindings, int depth = 0) where TMap : new()
+        public static Expression<Func<TSource, TMap>> GenerateMappingV2<TSource, TMap>(ParameterExpression parameter, List<MemberBinding> memberBindings, int depth = 0) where TMap : new()
         {
             var sourceType = typeof(TSource);
             var mapType = typeof(TMap);
@@ -85,7 +87,7 @@ namespace QueryMutatorv2.Provider
 
                 foreach (var convention in CurrentConfiguration.Conventions)
                 {
-                    
+
                     //Todo needs to be refactored mapType 2. parameter is useless this way.
                     if (convention.Apply<TMap>(sourceProperty, mapType, cc)) break;
                 }
