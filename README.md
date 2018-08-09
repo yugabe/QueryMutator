@@ -92,7 +92,7 @@ using (var ctx = new MyContext())
 ```
 
 The above code will automap the properties of User to the DTO type, *and add another property to the 
-mapped object*. This will all happend as the query is executed, so no unneeded round trips to the database!
+mapped object*. This will all happen as the query is executed, so no unneeded round trips to the database!
 
 Great! What else?
 -----------------
