@@ -1,3 +1,13 @@
+> **Note**
+>
+> QueryMutator had a great run. I'm very proud of how it turned out and the small impact it had on the few people it did have an impact on.
+>
+> But (obviously) the repo is not maintained anymore, for a few reasons. In hindsight, using automapping was a great way to reduce the quantity of code on a few of our projects, and it was more performant in many cases than the custom user code would've been. But it made a few bugs difficult to debug, as most things that happened were kind of a black magic. It was great when it worked, and a bit painful when it didn't (it could've been a typo in user code, like the naming of a property, but still). Then of course, EF Core improved a lot, and made many of the benefits of QueryMutator moot. Then, EF Core improved even more, and QueryMutator stopped working in many cases. So I don't advise people to use QueryMutator in new projects.
+>
+> The code itself is a time capsule and very dear to me. Expression mutation is still a very interesting topic to cover, and I'll come back to it sometime in the future. Until then, keep on mutatin'!
+
+------
+
 QueryMutator
 ============
 
